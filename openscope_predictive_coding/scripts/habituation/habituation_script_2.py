@@ -8,6 +8,8 @@ from camstim import Foraging
 from camstim import Window, Warp
 import glob
 import numpy as np
+import hashlib
+import json
 
 data_path = r'//allen/aibs/technology/nicholasc/openscope'
 n_repeats = 2
@@ -17,7 +19,8 @@ expected_habituated_sequence_duration = 100.0*n_repeats
 expected_familiar_movie_duration = 150.0*n_repeats
 expected_total_duration = expected_familiar_movie_duration+expected_habituated_sequence_duration+expected_randomized_oddball_duration+2*expected_gray_screen_duration
 
-HABITUATED_SEQUENCE_IMAGES = [68, 78, 13, 26]
+HABITUATED_SEQUENCE_IMAGES = json.load(open(os.path.join(data_path, "pilot_data.json"), 'r'))['HABITUATED_SEQUENCE_IMAGES']
+checksum_dict = json.load(open(os.path.join(data_path, 'habituation_pilot_checksum.json'), 'r'))
 
 if __name__ == "__main__":
 
@@ -28,10 +31,12 @@ if __name__ == "__main__":
                     warp=Warp.Spherical
                     )
 
-
     def get_sequence_block(base_seq, cycle_length, frame_length=.25, t0=0):
         base_seq_str = '_'.join([str(ii) for ii in base_seq])
         movie_path = os.path.join(data_path, '%s.npy' % base_seq_str)
+        movie_data = np.load(movie_path)
+        assert hashlib.md5(movie_data).hexdigest() == checksum_dict[movie_path]
+
         base_seq_stim = MovieStim(movie_path=movie_path,
                                         window=window,
                                         frame_length=frame_length,
@@ -47,6 +52,8 @@ if __name__ == "__main__":
     def get_natural_movie_block(cycle_length, frame_length=2.0/60.0, t0=0):
         movie_path = os.path.join(data_path, 'NATURAL_MOVIE_ONE.npy')
         movie_data = np.load(movie_path)
+        assert hashlib.md5(movie_data).hexdigest() == checksum_dict[movie_path]
+        
         movie_duration, movie_width, movie_height = movie_data.shape
         movie_stim = MovieStim(movie_path=movie_path,
                                         window=window,
@@ -64,6 +71,8 @@ if __name__ == "__main__":
     def get_randomized_oddball_image_block(cycle_length, frame_length=.25, t0=0):
         image_path = os.path.join(data_path, 'habituation_randomized_oddball.npy')
         image_data = np.load(image_path)
+        assert hashlib.md5(image_data).hexdigest() == checksum_dict[image_path]
+
         number_of_images, image_width, image_height = image_data.shape
         image_stim = MovieStim(movie_path=image_path,
                                         window=window,
