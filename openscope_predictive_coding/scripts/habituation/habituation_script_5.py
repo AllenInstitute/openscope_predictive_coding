@@ -8,6 +8,7 @@ from camstim import Foraging
 from camstim import Window, Warp
 import glob
 import numpy as np
+import hashlib
 
 data_path = r'//allen/aibs/technology/nicholasc/openscope'
 n_repeats = 5
@@ -32,6 +33,9 @@ if __name__ == "__main__":
     def get_sequence_block(base_seq, cycle_length, frame_length=.25, t0=0):
         base_seq_str = '_'.join([str(ii) for ii in base_seq])
         movie_path = os.path.join(data_path, '%s.npy' % base_seq_str)
+        movie_data = np.load(movie_path)
+        assert hashlib.md5(movie_data).hexdigest() == 'd1de3dfc46a972d323c7b52b9fff78a9'
+
         base_seq_stim = MovieStim(movie_path=movie_path,
                                         window=window,
                                         frame_length=frame_length,
@@ -47,6 +51,8 @@ if __name__ == "__main__":
     def get_natural_movie_block(cycle_length, frame_length=2.0/60.0, t0=0):
         movie_path = os.path.join(data_path, 'NATURAL_MOVIE_ONE.npy')
         movie_data = np.load(movie_path)
+        assert hashlib.md5(movie_data).hexdigest() == 'b174ad09736c870c6915baf82cf2c9ad'
+        
         movie_duration, movie_width, movie_height = movie_data.shape
         movie_stim = MovieStim(movie_path=movie_path,
                                         window=window,
@@ -64,6 +70,8 @@ if __name__ == "__main__":
     def get_randomized_oddball_image_block(cycle_length, frame_length=.25, t0=0):
         image_path = os.path.join(data_path, 'habituation_randomized_oddball.npy')
         image_data = np.load(image_path)
+        assert hashlib.md5(image_data).hexdigest() == 'c38555394253b83f42e2a257e1830c20'
+
         number_of_images, image_width, image_height = image_data.shape
         image_stim = MovieStim(movie_path=image_path,
                                         window=window,
