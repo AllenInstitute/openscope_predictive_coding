@@ -15,7 +15,7 @@ expected_gray_screen_duration = 60.0
 expected_randomized_oddball_duration = 250.0*n_repeats
 expected_habituated_sequence_duration = 100.0*n_repeats
 expected_familiar_movie_duration = 150.0*n_repeats
-expected_total_duration = 620.0*n_repeats
+expected_total_duration = expected_familiar_movie_duration+expected_habituated_sequence_duration+expected_randomized_oddball_duration+2*expected_gray_screen_duration
 
 HABITUATED_SEQUENCE_IMAGES = [68, 78, 13, 26]
 
