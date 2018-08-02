@@ -35,7 +35,7 @@ if __name__ == "__main__":
         base_seq_str = '_'.join([str(ii) for ii in base_seq])
         movie_path = os.path.join(data_path, '%s.npy' % base_seq_str)
         movie_data = np.load(movie_path)
-        assert hashlib.md5(movie_data).hexdigest() == checksum_dict[movie_path]
+        assert hashlib.md5(movie_data).hexdigest() == checksum_dict[movie_path.replace('\\','/')]
 
         base_seq_stim = MovieStim(movie_path=movie_path,
                                         window=window,
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     def get_natural_movie_block(cycle_length, frame_length=2.0/60.0, t0=0):
         movie_path = os.path.join(data_path, 'NATURAL_MOVIE_ONE.npy')
         movie_data = np.load(movie_path)
-        assert hashlib.md5(movie_data).hexdigest() == checksum_dict[movie_path]
+        assert hashlib.md5(movie_data).hexdigest() == checksum_dict[movie_path.replace('\\','/')]
         
         movie_duration, movie_width, movie_height = movie_data.shape
         movie_stim = MovieStim(movie_path=movie_path,
@@ -71,7 +71,7 @@ if __name__ == "__main__":
     def get_randomized_oddball_image_block(cycle_length, frame_length=.25, t0=0):
         image_path = os.path.join(data_path, 'habituation_randomized_oddball.npy')
         image_data = np.load(image_path)
-        assert hashlib.md5(image_data).hexdigest() == checksum_dict[image_path]
+        assert hashlib.md5(image_data).hexdigest() == checksum_dict[image_path.replace('\\','/')]
 
         number_of_images, image_width, image_height = image_data.shape
         image_stim = MovieStim(movie_path=image_path,
