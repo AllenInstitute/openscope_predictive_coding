@@ -44,12 +44,13 @@ if __name__ == "__main__":
         base_seq_str = '_'.join([str(ii) for ii in base_seq])
         movie_path = os.path.join(data_path, '%s.npy' % base_seq_str)
         movie_data = np.load(movie_path)
+        z,y,x=movie_data.shape
         assert hashlib.md5(movie_data).hexdigest() == checksum_dict[movie_path.replace('\\','/')]
 
         base_seq_stim = MovieStim(movie_path=movie_path,
                                         window=window,
                                         frame_length=frame_length,
-                                        size=(1920, 1080),
+                                        size=(x, y),
                                         start_time=0.0,
                                         stop_time=None,
                                         flip_v=True,
@@ -71,13 +72,14 @@ if __name__ == "__main__":
     def get_natural_movie_block(cycle_length, movie_name, frame_length=2.0/60.0, t0=0):
         movie_path = os.path.join(data_path, '%s.npy' % movie_name)
         movie_data = np.load(movie_path)
+        z,y,x = movie_data.shape
         assert hashlib.md5(movie_data).hexdigest() == checksum_dict[movie_path.replace('\\','/')]
         
         movie_duration, movie_width, movie_height = movie_data.shape
         movie_stim = MovieStim(movie_path=movie_path,
                                         window=window,
                                         frame_length=frame_length,
-                                        size=(1920, 1200),
+                                        size=(x, y),
                                         start_time=0.0,
                                         stop_time=None,
                                         flip_v=True,
@@ -90,13 +92,14 @@ if __name__ == "__main__":
     def get_randomized_control(cycle_length, frame_length=.25, t0=0):
         image_path = os.path.join(data_path, 'randomized_control_%s.npy' % session_type)
         image_data = np.load(image_path)
+        z,y,x = image_data.shape
         assert hashlib.md5(image_data).hexdigest() == checksum_dict[image_path.replace('\\','/')]
 
         number_of_images, image_width, image_height = image_data.shape
         image_stim = MovieStim(movie_path=image_path,
                                         window=window,
                                         frame_length=frame_length,
-                                        size=(1920, 1200),
+                                        size=(x, y),
                                         start_time=0.0,
                                         stop_time=None,
                                         flip_v=True,
