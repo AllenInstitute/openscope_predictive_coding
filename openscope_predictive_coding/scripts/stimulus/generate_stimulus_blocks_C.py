@@ -11,48 +11,48 @@ import hashlib
 import json
 
 tgt_dir = '//allen/aibs/technology/nicholasc/openscope'
-session_type = 'B'
+session_type = 'C'
 
 assert os.path.basename(__file__).split('.')[0][-1] == session_type
 
 SEQUENCE_IMAGES = opc.SEQUENCE_IMAGES[session_type]
 ODDBALL_IMAGES = opc.ODDBALL_IMAGES[session_type]
 
-oddball_checksum_list = ["ab5644ce065d12d4bef02982048c1162",
-                        "df1a9ba73991af88df190aa0796fcd86",
-                        "8482e756f08df363a615e17f022d7076",
-                        "32aed2bc5175f77ab70ea0012eefc397",
-                        "97412d675a020b77dfe6a9c132be92c6",
-                        "9cbe99ec99a9d5dccae6d336c2d78ffe",
-                        "6126b9b6fb81a2d99a69c53800922390",
-                        "25f32c6b10d409ad93f29f4370a98a67",
-                        "4d8c88a783c27b69072b41946646b9f3",
-                        "973259b77ae319e9ac6ae3e5da57e95b",]
+oddball_checksum_list = ["9aad9dc478dfd933589d7e675ffd1bc6",
+                        "8883d50688f5838268f5659d9d561536",
+                        "fa437b8a3cb0ecee4cfc8eb4af119266",
+                        "1062d613b416bf2289edf44ea7914027",
+                        "e15bd9c2a0cdbd20c9d9c42f84a8965b",
+                        "f1ca73a20244aa613648a7c81d4225df",
+                        "7358eb6ad40c8d65b1870029a9d664dc",
+                        "577ec667c244f1f2adc77cb5daeb7d08",
+                        "05eeabb07c045c1563435dbf33ec4683",
+                        "71ed8e7b66fcef0d9ba22acf31cbd4d3",]
 
-pair_checksum_list = ["f0bb86647603d47fae185eda34afed80",
-                    "8e2081daa42e6538efa99d1e50122e82",
-                    "4dec9bce75d8be13c52ff0dd7b809ce7",
-                    "43711bbe958bb58a3bc22e6ae3d02a1e",
-                    "1406691ac248e0cf22f32e95cd99325f",
-                    "4cfdb5e2e4e6db6fb2a69507130c6199",
-                    "dae3efa675663ef439d8f8a2bef63677",
-                    "0cec8e5f5618844ace55555bc0266294",
-                    "d43cdde8a3033dc6c4a6f334523d6bd2",
-                    "9b6fcfe22ed0a681ffd6ad8c6783d367",
-                    "1bb4f79f4f3a814125e3d7a8f0bce959",
-                    "9af2e373414d0b5ac9c3d915252a7a0f",
-                    "2bee87b5e737b4458f059eb2879978a0",
-                    "f810a847ae64785c67a79a909be5bd09",
-                    "8fed3bef24891d63c797c9f62668588c",
-                    "2322a219fd4e90500b2d85d3a55a1a7f",
-                    "382e4f85298acf0df6d43d8ec8450ca0",
-                    "7bd0e82a2d4e8a3945eba86af752d26c",
-                    "233c55e08dbcf476ab4848fb1428051a",
-                    "ea1db11b1766c0c2ebb1ef14eb12e3ec",
-                    "3c3e2e89497624b84a50a6b0a4f1d243",
-                    "9d22fcbec1e2e2f73f6b4883802fbbc6",
-                    "938a48e30d55be2a7dd9e1589ffe1857",
-                    "ee24a4bacefe0cbfe2d3610dc094f6b1",]
+pair_checksum_list = ["581624fcf6f214e9d5f47a4f86859fc6",
+                    "64370d3a980ab6445825d38ae2cb24f2",
+                    "7fafd4148a805c7c08e1229b660fb313",
+                    "62478a2bfc90ca22b2b1b0d65c15f6a5",
+                    "70dfd32e2c1837208013981b163bf1d7",
+                    "71738dda424e7ef7e7692d1e34dc45ad",
+                    "e31d7f67260c11515ce8ef6decfbca75",
+                    "fb573cfda4cc9e47620f8e068f636fd8",
+                    "44b9b8f4bba4562b5fb52263d9752612",
+                    "5aa526991c7c56fba8d8c499cfd2804f",
+                    "3fc3d6394d165d95f362566ff795af70",
+                    "f1caca595db966f7ff58256bbd853fdf",
+                    "d5849107b7b29d47ddcf02e4545d3c64",
+                    "4caa94e5652f137dd2df0b5cc54b5c8f",
+                    "63d4884598b1ca49af659a1eac33e021",
+                    "063c434809673a20a51b81ef7ab49494",
+                    "8809b4a15aa8ffbefd7640f726591554",
+                    "7b53275d0c005b88e175315609dd678c",
+                    "5fbd94283f8a2ab33140220562a4efa0",
+                    "db7c1d2781327ef7c43652eef7038731",
+                    "a33907fb72d03f86c49d3a7254fac72e",
+                    "788e49aac95ce6e265ae75a95b8abf11",
+                    "7aaa63473e63970d8facf822000aad22",
+                    "9dbb58f83d3964fba3fb0d8c2e2b9053",]
 
 stimulus_pilot_checksum_dict = {}
 stimulus_pilot_data = {}
@@ -60,7 +60,7 @@ stimulus_pilot_data = {}
 # Generate base sequence:
 save_file_name = os.path.join(tgt_dir, '%s.npy' % '_'.join([str(x) for x in SEQUENCE_IMAGES]))
 base_block_checksum, base_block_file_name = utilities.generate_sequence_block(SEQUENCE_IMAGES, save_file_name=save_file_name)
-assert base_block_checksum == '41e5f2b7f0fad6735a4eb566514efd1c'
+assert base_block_checksum == '4cc6cf0c0b4abd23b60e79540b9175a4'
 stimulus_pilot_checksum_dict[base_block_file_name] = base_block_checksum
 
 # Generate oddball sequences: 
@@ -69,9 +69,10 @@ for curr_checksum, oddball_id in zip(oddball_checksum_list, ODDBALL_IMAGES):
     tmp_seq[-1] = oddball_id
 
     save_file_name = os.path.join(tgt_dir, '%s.npy' % '_'.join([str(x) for x in tmp_seq]))
-    curr_oddball_block_checksum, curr_oddball_block_file_name = utilities.generate_sequence_block(tmp_seq, save_file_name=save_file_name)
+    curr_oddball_block_checksum, curr_oddball_block_file_name = utilities.generate_sequence_block(tmp_seq, save_file_name=save_file_name)    
     assert curr_oddball_block_checksum == curr_checksum
     stimulus_pilot_checksum_dict[curr_oddball_block_file_name] = curr_oddball_block_checksum
+
 
 # Generate transition pair sequences:
 pair_list = []
@@ -88,7 +89,6 @@ for pair, curr_checksum in zip(pair_list, pair_checksum_list):
     pair_checksum, pair_file_name = utilities.generate_sequence_block(pair, save_file_name=save_file_name)
     assert pair_checksum == curr_checksum
     stimulus_pilot_checksum_dict[pair_file_name] = pair_checksum
-
 pair_timing_list = []
 pair_timing_dict = utilities.generate_pair_block_timing_dict(pair_list, num_repeats=30, frame_length=.25, expected_duration=360., seed=0)
 for key_val in pair_timing_dict.items():
@@ -98,7 +98,7 @@ stimulus_pilot_data['pair_timing'] = pair_timing_list
 # Generate randomized oddballs block:
 hab_randomized_control_full_sequence = utilities.get_shuffled_repeated_sequence(ODDBALL_IMAGES + SEQUENCE_IMAGES, 30, seed=1)
 hab_randomized_control_checksum, hab_randomized_control_file_name = utilities.generate_sequence_block(hab_randomized_control_full_sequence, save_file_name=os.path.join(tgt_dir, 'randomized_control_%s.npy' % session_type))
-assert hab_randomized_control_checksum == '2c3fd3b6529df6160df336a16fdc9862'
+assert hab_randomized_control_checksum == '3c71dd8b15d716eade27c4a2a394fa2e'
 stimulus_pilot_checksum_dict[hab_randomized_control_file_name] = hab_randomized_control_checksum
 
 

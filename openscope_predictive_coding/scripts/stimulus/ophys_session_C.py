@@ -20,7 +20,7 @@ expected_pair_control_duration = 360.0
 expected_familiar_movie_duration = 300.0
 expected_novel_movie_duration = 300.0
 expected_total_duration = 3590.0
-session_type = 'B'
+session_type = 'C'
 
 # Consistency check:
 assert os.path.basename(__file__).split('.')[0][-1] == session_type
