@@ -11,9 +11,12 @@ import hashlib
 import json
 
 tgt_dir = '//allen/aibs/technology/nicholasc/openscope'
+session_type = 'A'
 
-SEQUENCE_IMAGES = opc.HABITUATED_SEQUENCE_IMAGES
-ODDBALL_IMAGES = opc.RANDOMIZED_ODDBALL_UNEXPECTED_IMAGES
+assert os.path.basename(__file__).split('.')[0][-1] == session_type
+
+SEQUENCE_IMAGES = opc.SEQUENCE_IMAGES[session_type]
+ODDBALL_IMAGES = opc.ODDBALL_IMAGES[session_type]
 
 oddball_checksum_list = ['4c8ce2cbf60878ac431bb253fe98445a',
                          'd2a3f15f86a5e46c7e4d47f8810ebd9f',
@@ -94,7 +97,7 @@ stimulus_pilot_data['pair_timing'] = pair_timing_list
 
 # Generate randomized oddballs block:
 hab_randomized_control_full_sequence = utilities.get_shuffled_repeated_sequence(ODDBALL_IMAGES + SEQUENCE_IMAGES, 30, seed=1)
-hab_randomized_control_checksum, hab_randomized_control_file_name = utilities.generate_sequence_block(hab_randomized_control_full_sequence, save_file_name=os.path.join(tgt_dir, 'hab_randomized_control.npy'))
+hab_randomized_control_checksum, hab_randomized_control_file_name = utilities.generate_sequence_block(hab_randomized_control_full_sequence, save_file_name=os.path.join(tgt_dir, 'randomized_control_%s.npy' % session_type))
 assert hab_randomized_control_checksum == 'e0639fb53419561ef4f20fa76b016260'
 stimulus_pilot_checksum_dict[hab_randomized_control_file_name] = hab_randomized_control_checksum
 
@@ -109,7 +112,7 @@ oddball_dict = utilities.generate_oddball_block_timing_dict(SEQUENCE_IMAGES, ODD
 for key_val in oddball_dict.items():
     oddball_list.append(key_val)
 stimulus_pilot_data['oddball_timing'] = oddball_list
-json.dump(stimulus_pilot_data, open(os.path.join(tgt_dir, 'stimulus_pilot_data_A.json'), 'w'), indent=2)
+json.dump(stimulus_pilot_data, open(os.path.join(tgt_dir, 'stimulus_pilot_data_%s.json' % session_type), 'w'), indent=2)
 
 
 

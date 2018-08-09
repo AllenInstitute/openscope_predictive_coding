@@ -1,5 +1,5 @@
 """
-OpenScope Habituation Script
+OpenScope OPhys Stimulus Script
 """
 import os
 from psychopy import visual
@@ -14,13 +14,16 @@ import warnings
 
 data_path = r'//allen/aibs/technology/nicholasc/openscope'
 expected_gray_screen_duration = 60.0
-expected_hab_randomized_control_duration = 105.0
+expected_randomized_control_duration = 105.0
 expected_oddball_stimulus_list_duration = 2000.0
-expected_hab_pair_control_duration = 360.0
+expected_pair_control_duration = 360.0
 expected_occlusion_duration = 600.0
 expected_familiar_movie_duration = 300.0
 expected_total_duration = 3740.0
 session_type = 'A'
+
+# Consistency check:
+assert os.path.basename(__file__).split('.')[0][-1] == session_type
 
 checksum_dict = json.load(open(os.path.join(data_path, 'stimulus_pilot_checksum_dict_%s.json' % session_type), 'r'))
 for key, val in checksum_dict.items():
@@ -86,8 +89,8 @@ if __name__ == "__main__":
         movie_stim.set_display_sequence([(t0_b, tf_b)])
         return [movie_stim], tf_b
 
-    def get_hab_randomized_control(cycle_length, frame_length=.25, t0=0):
-        image_path = os.path.join(data_path, 'hab_randomized_control.npy')
+    def get_randomized_control(cycle_length, frame_length=.25, t0=0):
+        image_path = os.path.join(data_path, 'randomized_control_%s.npy' % session_type)
         image_data = np.load(image_path)
         assert hashlib.md5(image_data).hexdigest() == checksum_dict[image_path.replace('\\','/')]
 
@@ -119,10 +122,10 @@ if __name__ == "__main__":
     spontaneous_gray_screen_stimulus_list_1, tf = get_spontaneous_gray_screen_block(60., t0=t0)
     assert tf - t0 == expected_gray_screen_duration
 
-    # Hab randomized control pre:
+    # Randomized control pre:
     t0 = tf
-    hab_randomized_control_list_pre, tf = get_hab_randomized_control(1, t0=t0)
-    assert tf - t0 == expected_hab_randomized_control_duration
+    randomized_control_list_pre, tf = get_randomized_control(1, t0=t0)
+    assert tf - t0 == expected_randomized_control_duration
 
     # Spontaneous gray screen block (offset):
     t0 = tf
@@ -148,7 +151,7 @@ if __name__ == "__main__":
     assert tf - t0 == expected_gray_screen_duration
 
 
-    # habituation pair control sequence block:
+    # Pair control sequence block:
     t0 = tf
     pair_list = json.load(open(os.path.join(data_path, 'stimulus_pilot_data_%s.json' % session_type), 'r'))['pair_timing']
     pair_stimulus_list = []
@@ -158,7 +161,7 @@ if __name__ == "__main__":
         pair_stimulus_list += curr_stim
         tf_list.append(curr_tf)
     tf = max(tf_list)
-    assert tf - t0 == expected_hab_pair_control_duration
+    assert tf - t0 == expected_pair_control_duration
 
 
     # Spontaneous gray screen block (offset):
@@ -187,10 +190,10 @@ if __name__ == "__main__":
     assert tf - t0 == expected_gray_screen_duration
 
 
-    # Hab randomized control post:
+    # Randomized control post:
     t0 = tf
-    hab_randomized_control_list_post, tf = get_hab_randomized_control(1, t0=t0)
-    assert tf - t0 == expected_hab_randomized_control_duration
+    randomized_control_list_post, tf = get_randomized_control(1, t0=t0)
+    assert tf - t0 == expected_randomized_control_duration
 
 
     # Spontaneous gray screen block (offset):
@@ -203,7 +206,7 @@ if __name__ == "__main__":
 
     stimuli = []
     stimuli += spontaneous_gray_screen_stimulus_list_1
-    stimuli += hab_randomized_control_list_pre
+    stimuli += randomized_control_list_pre
     stimuli += spontaneous_gray_screen_stimulus_list_2
     stimuli += oddball_stimulus_list
     stimuli += spontaneous_gray_screen_stimulus_list_3
@@ -213,7 +216,7 @@ if __name__ == "__main__":
     stimuli += spontaneous_gray_screen_stimulus_list_5
     stimuli += familiar_movie_stimulus_list
     stimuli += spontaneous_gray_screen_stimulus_list_6
-    stimuli += hab_randomized_control_list_post
+    stimuli += randomized_control_list_post
     stimuli += spontaneous_gray_screen_stimulus_list_7
 
     params = {}
@@ -231,22 +234,3 @@ if __name__ == "__main__":
                             'digital_output': ss.do,})  #share di and do with SS
     ss.add_item(f, "foraging")
     ss.run()
-
-
-
-
-
-
-    # # Habituated sequence block:
-    # t0 = tf
-    # habituated_sequence_stimulus_list, tf = get_sequence_block(HABITUATED_SEQUENCE_IMAGES, 20*5*n_repeats, t0=t0) # cycles-per-repeat times number of repeats
-    # assert tf - t0 == expected_habituated_sequence_duration
-
-    # # Spontaneous gray screen block (offset):
-    # t0 = tf
-    # spontaneous_gray_screen_stimulus_list_2, tf = get_spontaneous_gray_screen_block(60., t0=t0)
-    # assert tf - t0 == expected_gray_screen_duration
-
-
-
-
