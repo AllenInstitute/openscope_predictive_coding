@@ -1,0 +1,4 @@
+# D = generate_oddball_block_timing_dict([0,1,2], [10,20], num_cycles_per_repeat=3, oddball_cycle_min=2, oddball_cycle_max=3, num_repeats_per_oddball=2, frame_length=.1, t0=.01, seed=0)
+# D = generate_oddball_block_timing_dict([0,1,2], [10,20, 30, 40], num_cycles_per_repeat=3, oddball_cycle_min=2, oddball_cycle_max=3, num_repeats_per_oddball=2, frame_length=.001, t0=.01, seed=0)
+# D = generate_oddball_block_timing_dict([0,1,2], [10,20, 30], num_cycles_per_repeat=3, oddball_cycle_min=2, oddball_cycle_max=3, num_repeats_per_oddball=10, frame_length=.15, t0=.01, seed=0)
+# D = generate_oddball_block_timing_dict([0,1,2,3], [10,20, 30], num_cycles_per_repeat=2, oddball_cycle_min=2, oddball_cycle_max=2, num_repeats_per_oddball=2, frame_length=.1, t0=.01, seed=0)
