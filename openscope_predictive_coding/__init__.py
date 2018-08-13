@@ -1,5 +1,6 @@
+import os
 
-
+data_path = os.path.join(os.path.dirname(__file__), 'data')
 
 SEQUENCE_IMAGES = {}
 SEQUENCE_IMAGES['A'] = [68, 78, 13, 26]

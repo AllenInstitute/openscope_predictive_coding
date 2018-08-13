@@ -8,6 +8,10 @@ from collections import defaultdict
 src_file_name = '/allen/aibs/technology/nicholasc/openscope/NATURAL_SCENES_LUMINANCE_MATCHED.npy'
 src_image_data = np.load(src_file_name)
 
+def get_hash(data):
+
+    return hashlib.md5(data).hexdigest()
+
 def get_shuffled_repeated_sequence(src_sequence, number_of_shuffles, seed=None):
     
     if seed is not None:
