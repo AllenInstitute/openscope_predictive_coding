@@ -4,9 +4,59 @@ import numpy as np
 import hashlib
 import copy
 from collections import defaultdict
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+import tempfile
+import scipy.optimize as sopt
+import collections
+import functools
 
-src_file_name = '/allen/aibs/technology/nicholasc/openscope/NATURAL_SCENES_LUMINANCE_MATCHED.npy'
-src_image_data = np.load(src_file_name)
+import openscope_predictive_coding as opc
+import allensdk.brain_observatory.stimulus_info as si
+
+monitor = si.BrainObservatoryMonitor()
+
+def seq_to_str(sequence):
+    return '_'.join([str(ii) for ii in sequence])
+
+
+def downsample_monitor_to_template(img):
+    
+    if len(img.shape) == 2:
+        assert img.shape == (opc.SCREEN_H, opc.SCREEN_W)
+        new_data = img[::2, ::2]
+        assert new_data.shape == (opc.IMAGE_H, opc.IMAGE_W)
+        return new_data
+    elif len(img.shape) == 3:
+        raise NotImplementedError
+    else:
+        raise Exception
+
+
+def one(x):
+    assert len(x) == 1
+    if isinstance(x,set):
+        return list(x)[0]
+    else:
+        return x[0]
+
+def apply_warp_on_monitor(img):
+
+    fig, ax = plt.subplots(1,1)
+    monitor.show_image(img, ax=ax, warp=True, mask=False, show=False)
+    img_warped = one([obj for obj in ax.get_children() if isinstance(obj, mpl.image.AxesImage)]).get_array()
+    assert img_warped.shape == si.MONITOR_DIMENSIONS
+    return img_warped
+
+def apply_warp_natural_scene(img):
+    assert img.shape == si.NATURAL_SCENES_PIXELS
+    img_screen = monitor.natural_scene_image_to_screen(img)
+    return apply_warp_on_monitor(img_screen)
+
+def apply_warp_natural_movie(img):
+    assert img.shape == si.NATURAL_MOVIE_DIMENSIONS
+    img_screen = monitor.natural_movie_image_to_screen(img, origin='upper')
+    return apply_warp_on_monitor(img_screen)
 
 def get_hash(data):
 
@@ -74,9 +124,7 @@ def generate_oddball_block_timing_dict(base_seq, oddball_list, num_cycles_per_re
 
     return timing_dict
 
-def generate_sequence_block(base_seq, save_file_name):
-    
-    base_seq_str = '_'.join([str(ii) for ii in base_seq])
+def generate_sequence_block(base_seq, src_image_data):
 
     N = len(base_seq)
     h, w = src_image_data.shape[1:]
@@ -84,8 +132,7 @@ def generate_sequence_block(base_seq, save_file_name):
     for ii, idx in enumerate(base_seq):
         data_block[ii,:,:] = src_image_data[idx,:,:]
 
-    np.save(save_file_name, data_block)
-    return hashlib.md5(data_block).hexdigest(), save_file_name
+    return data_block
 
 def generate_pair_block_timing_dict(pair_list, num_repeats=30, frame_length=.25, expected_duration=None, seed=None):
 
@@ -114,3 +161,98 @@ def generate_pair_block_timing_dict(pair_list, num_repeats=30, frame_length=.25,
         curr_timing_list.sort(key=lambda x:x[0])
     
     return timing_dict
+
+def linear_transform_image(img, m_M):
+    
+    m = float(m_M[0])
+    M = 255.-float(m_M[1])
+    
+    return (img-img.min())*(M-m)/(img.max()-img.min()) + m
+
+def luminance_match(img):
+    
+    def f(m_M):
+        
+        tmp = linear_transform_image(img, m_M)
+        aa = tmp.mean()
+        bb = tmp.std()/tmp.mean()
+
+        return 100*((tmp.mean()-127.)/aa)**2 + ((tmp.std()/tmp.mean()-.6)/bb)**2
+
+    x_res = sopt.minimize(f, (0,0), bounds=((0,255),(0,255),)).x
+    return linear_transform_image(img, x_res)
+
+def run_camstim_debug(img_stack, timing_list, frame_length, runs):
+    
+    assert (img_stack.dtype) == 'uint8'
+    assert len(img_stack.shape) == 3
+    
+    from camstim import SweepStim, MovieStim
+    from camstim import Foraging
+    from camstim import Window
+
+    # Create display window, warped
+    window = Window(fullscr=True,
+                    monitor='Gamma1.Luminance50',
+                    screen=0
+                    )
+
+    tmp_dir = tempfile.mkdtemp()
+
+    timing_list = sorted(timing_list, key=lambda x:x[0])
+    movie_path = '%s.npy' % get_hash(img_stack)
+    np.save(movie_path, img_stack)
+    movie =  MovieStim(movie_path=movie_path,
+                        window=window,
+                        frame_length=frame_length,
+                        size=(opc.SCREEN_W, opc.SCREEN_H),
+                        start_time=0.0,
+                        stop_time=None,
+                        flip_v=True,
+                        runs=runs)
+
+    movie.set_display_sequence(timing_list)
+    stimuli = [movie]
+
+    ss = SweepStim(window,
+                stimuli=stimuli,
+                pre_blank_sec=0,
+                post_blank_sec=0)
+
+    f = Foraging(window=window,
+                auto_update=False,
+                nidaq_tasks={'digital_input': ss.di,
+                            'digital_output': ss.do,})  #share di and do with SS
+    ss.add_item(f, "foraging")
+    ss.run()
+
+
+
+
+class memoized(object):
+   '''Decorator. Caches a function's return value each time it is called.
+   If called later with the same arguments, the cached value is returned
+   (not reevaluated).
+
+   https://wiki.python.org/moin/PythonDecoratorLibrary#Memoize
+   '''
+   def __init__(self, func):
+      self.func = func
+      self.cache = {}
+   def __call__(self, *args):
+      if not isinstance(args, collections.Hashable):
+         # uncacheable. a list, for instance.
+         # better to not cache than blow up.
+         return self.func(*args)
+      if args in self.cache:
+         return self.cache[args]
+      else:
+         value = self.func(*args)
+         self.cache[args] = value
+         return value
+   def __repr__(self):
+      '''Return the function's docstring.'''
+      return self.func.__doc__
+   def __get__(self, obj, objtype):
+      '''Support instance methods.'''
+      return functools.partial(self.__call__, obj)

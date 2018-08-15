@@ -20,13 +20,12 @@ def gkern(kernlen, nsig):
     kernel = kernel_raw/np.amax(kernel_raw)#kernel_raw/kernel_raw.sum()
     return kernel
 
-def occluder(x_center,y_center,r,image, x_max, y_max):
+def occluder(x_center,y_center,r,image, fill_val=127, sig_gauss=.7, x_max=None, y_max=None):
     for x in range(x_center-r,x_center+r):
         y = range(int(np.ceil(-np.sqrt(r**2-(x-x_center)**2)+y_center)),int(np.ceil(np.sqrt(r**2-(x-x_center)**2)+y_center)))
-        image[x,y]= 127# 127 for gray occluders, 0 for black occluders
+        image[x,y]= fill_val# 127 for gray occluders, 0 for black occluders
         
     margin = 5 # Margin can be adjusted
-    sig_gauss = 2 # Sigma for Gaussian kernel
     
     x_left = x_center-r-margin
     y_left = y_center-r-margin
