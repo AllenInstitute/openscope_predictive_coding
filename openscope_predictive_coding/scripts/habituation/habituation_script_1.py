@@ -9,11 +9,9 @@ from camstim import Window
 import numpy as np
 import hashlib
 
-import warnings
-warnings.warn('data path not set')
-# data_path = r'//allen/aibs/technology/nicholasc/openscope'
-import openscope_predictive_coding as opc
-data_path = opc.data_path
+
+data_path = r'//allen/aibs/technology/nicholasc/openscope'
+
 
 n_repeats = 1
 expected_gray_screen_duration = 60.0
@@ -183,8 +181,6 @@ assert tf - t0 == expected_familiar_movie_duration
 tf += 60
 
 
-# warnings.warn('DURATION')
-print tf, expected_total_duration
 assert tf == expected_total_duration
 params = {}
 ss = SweepStim(window,
