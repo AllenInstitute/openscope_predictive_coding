@@ -30,7 +30,6 @@ window = Window(fullscr=True,
 
 def get_block(file_name, timing_list, frame_length, runs, t0):
 
-        movie_data = np.load(file_name)
         base_seq_stim = MovieStim(movie_path=file_name,
                                         window=window,
                                         frame_length=frame_length,
