@@ -1,20 +1,18 @@
 import os
 import numpy as np
 
-data_path = os.path.join(os.path.dirname(__file__), 'data', 'pilot')
+data_path = os.path.join(os.path.dirname(__file__), 'data')
 boc_path = '/home/nicholasc/boc'
 
-import stimulus
-
 SEQUENCE_IMAGES = {}
-SEQUENCE_IMAGES['A'] = [68, 78, 13, 26]
-SEQUENCE_IMAGES['B'] = [53, 44, 8, 14]
-SEQUENCE_IMAGES['C'] = [114, 23, 65, 101]
+SEQUENCE_IMAGES['A'] = (68, 78, 13, 26)
+SEQUENCE_IMAGES['B'] = (53, 44, 8, 14)
+SEQUENCE_IMAGES['C'] = (114, 23, 65, 101)
 
 ODDBALL_IMAGES = {}
-ODDBALL_IMAGES['A'] = [6, 22, 51, 71, 111, 17, 110, 112, 103, 89]
-ODDBALL_IMAGES['B'] = [7, 94, 9, 29, 117, 42, 10, 45, 41, 19]
-ODDBALL_IMAGES['C'] = [96, 84, 32, 15, 115, 27, 40, 52, 93, 35]
+ODDBALL_IMAGES['A'] = (6, 22, 51, 71, 111, 17, 110, 112, 103, 89)
+ODDBALL_IMAGES['B'] = (7, 94, 9, 29, 117, 42, 10, 45, 41, 19)
+ODDBALL_IMAGES['C'] = (96, 84, 32, 15, 115, 27, 40, 52, 93, 35)
 
 
 HABITUATED_SEQUENCE_IMAGES = SEQUENCE_IMAGES['A']
@@ -47,3 +45,5 @@ OCCLUSION_NUM_DOT_to_FRACTION = {0:0., 20:.15, 44:.3, 66:.4, 100:.5, 136:.6}
 # Consistency check:
 for key in OCCLUSION_NUM_DOT_to_FRACTION:
     assert key in OCCLUSION_NUM_DOT_LIST
+
+import stimulus
