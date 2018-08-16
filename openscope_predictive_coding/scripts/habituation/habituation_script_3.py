@@ -30,27 +30,27 @@ window = Window(fullscr=True,
 
 def get_block(file_name, timing_list, frame_length, runs, t0):
 
-        base_seq_stim = MovieStim(movie_path=file_name,
-                                        window=window,
-                                        frame_length=frame_length,
-                                        size=(1920, 1200),
-                                        start_time=0.0,
-                                        stop_time=None,
-                                        flip_v=True,
-                                        runs=runs,)
+    base_seq_stim = MovieStim(movie_path=file_name,
+                                    window=window,
+                                    frame_length=frame_length,
+                                    size=(1920, 1200),
+                                    start_time=0.0,
+                                    stop_time=None,
+                                    flip_v=True,
+                                    runs=runs,)
 
-        # Shift t0:
-        timing_hwm = -float('inf')
-        timing_list_new = []
-        for t_start, t_end in timing_list:
-            t_start_new = t_start+t0
-            t_end_new = t_end+t0
-            timing_list_new.append((t_start_new, t_end_new))
-            if t_end_new > timing_hwm:
-                timing_hwm = t_end_new
+    # Shift t0:
+    timing_hwm = -float('inf')
+    timing_list_new = []
+    for t_start, t_end in timing_list:
+        t_start_new = t_start+t0
+        t_end_new = t_end+t0
+        timing_list_new.append((t_start_new, t_end_new))
+        if t_end_new > timing_hwm:
+            timing_hwm = t_end_new
 
-        base_seq_stim.set_display_sequence(timing_list_new)
-        return base_seq_stim, timing_hwm
+    base_seq_stim.set_display_sequence(timing_list_new)
+    return base_seq_stim, timing_hwm
 
 
 # Initialize:
