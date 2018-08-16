@@ -1,3 +1,5 @@
+boc
 .history
 *.pyc
 .pytest_cache
+openscope_predictive_coding/data
