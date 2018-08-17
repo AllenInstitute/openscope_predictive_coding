@@ -18,7 +18,7 @@ expected_gray_screen_duration = 60.0
 expected_randomized_oddball_duration = 250.0*n_repeats
 expected_habituated_sequence_duration = 100.0*n_repeats
 expected_familiar_movie_duration = 150.0*n_repeats
-expected_total_duration = expected_familiar_movie_duration+expected_habituated_sequence_duration+expected_randomized_oddball_duration+4*expected_gray_screen_duration
+expected_total_duration = expected_familiar_movie_duration+expected_habituated_sequence_duration+expected_randomized_oddball_duration+3*expected_gray_screen_duration
 
 assert os.path.basename(__file__).split('.')[0][-1] == str(n_repeats)
 
@@ -102,9 +102,6 @@ timing_list = [(ii*frame_length*number_of_frames, (ii+1)*frame_length*number_of_
 curr_stimulus_list, tf = get_block(file_name, timing_list, frame_length, runs, t0=t0)
 stimuli.append(curr_stimulus_list)
 assert tf - t0 == expected_familiar_movie_duration
-
-# # Spontaneous gray screen block 4:
-tf += 60
 
 
 assert tf == expected_total_duration
