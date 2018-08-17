@@ -33,14 +33,15 @@ hash_dict = {
             si.NATURAL_MOVIE_ONE + '_warped': '77ee4ecd0dc856c80cf24621303dd080',
             NATURAL_SCENES_WARPED: '8ba4262b06ec81c3ec8d3d7d7831e564',
             HABITUATION_PILOT_RANDOMIZED_ODDBALL: '5cd9854e9cb07a427180d6e130c148ab',
-            opc.SEQUENCE_IMAGES['A']: '2950e8d1e5187ce65ac40f5381be0b3f'
+            opc.SEQUENCE_IMAGES['A']: '2950e8d1e5187ce65ac40f5381be0b3f',
+            opc.SEQUENCE_IMAGES["C"]:'e17602dcefbd0e2ec66f81b46e4583f0',
+            opc.SEQUENCE_IMAGES["B"]:'0dbffd94a00dc4e9ea22ad75662d36bd',
             }
 
 
 STIMULUS_LIST = TEMPLATE_LIST+TEMPLATE_LIST_WARPED+HABITUATION_PILOT_DATA
 
 assert set(stimulus_oeid_dict.keys()) == set(TEMPLATE_LIST)
-assert set(hash_dict.keys()) == set(STIMULUS_LIST+[opc.SEQUENCE_IMAGES['A']])
 assert NATURAL_SCENES_WARPED in TEMPLATE_LIST_WARPED
 
 def get_stimulus_path(stimulus_key, data_path=default_data_path, append_hash=True):
@@ -138,7 +139,7 @@ def get_sequence_template(sequence, **kwargs):
         data = np.load(dataset_path)
     else:
     
-        src_image_data = get_stimulus_template(NATURAL_SCENES_WARPED)
+        src_image_data = get_stimulus_template(NATURAL_SCENES_WARPED, **kwargs)
         data = generate_sequence_block(sequence, src_image_data)
         assert hash_dict[sequence] == get_hash(data)
         np.save(dataset_path, data)
@@ -146,6 +147,11 @@ def get_sequence_template(sequence, **kwargs):
     assert hash_dict[sequence] == get_hash(data)
     return data
 
+def get_sequence_hash(sequence, **kwargs):
+    src_image_data = get_stimulus_template(NATURAL_SCENES_WARPED, **kwargs)
+    data = generate_sequence_block(sequence, src_image_data)
+    return get_hash(data)
+    
 
 @memoized
 def get_stimulus_template(stimulus, **kwargs):
@@ -172,7 +178,10 @@ if __name__ == "__main__":
     
     # for stimulus in STIMULUS_LIST:
     # template = get_stimulus_template(si.NATURAL_SCENES+'_warped')
-    template = get_stimulus_template(opc.HABITUATED_SEQUENCE_IMAGES)
+    for key, val in opc.SEQUENCE_IMAGES.items():
+        # print 'opc.SEQUENCE_IMAGES["%s"]:"%s",' % (key, get_sequence_hash(val))
+        print get_stimulus_template(val)
+    # template = 
 
     # get_stimulus_template(si.NATURAL_SCENES + '_warped')
 

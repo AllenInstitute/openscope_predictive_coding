@@ -2,6 +2,7 @@ import os
 import numpy as np
 
 data_path = os.path.join(os.path.dirname(__file__), 'data')
+timing_path = os.path.join(os.path.dirname(__file__), 'timing')
 boc_path = '/home/nicholasc/boc'
 
 SEQUENCE_IMAGES = {}

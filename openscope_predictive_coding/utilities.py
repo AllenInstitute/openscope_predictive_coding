@@ -10,6 +10,7 @@ import tempfile
 import scipy.optimize as sopt
 import collections
 import functools
+import json
 
 import openscope_predictive_coding as opc
 import allensdk.brain_observatory.stimulus_info as si
@@ -256,3 +257,21 @@ class memoized(object):
    def __get__(self, obj, objtype):
       '''Support instance methods.'''
       return functools.partial(self.__call__, obj)
+
+def get_timing_dict(session, replace_base=True, data_path=opc.data_path):
+    
+    data = json.load(open(os.path.join(opc.timing_path, 'timing_%s.json' % session), 'r'))
+    
+    if replace_base == True:
+        new_data = {}
+        for key in data:
+            new_data[key] = os.path.join(data_path, os.path.basename(key))
+        return new_data
+    else:
+        return data
+        
+
+if __name__ == "__main__":
+    
+    # Debugging:
+    print get_timing_dict('habituation')

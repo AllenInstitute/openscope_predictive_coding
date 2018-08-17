@@ -57,11 +57,11 @@ pair_checksum_list = ['6a7769be1ba6bc543790fe7adaba5184',
 stimulus_pilot_checksum_dict = {}
 stimulus_pilot_data = {}
 
-# Generate base sequence:
-save_file_name = os.path.join(tgt_dir, '%s.npy' % '_'.join([str(x) for x in SEQUENCE_IMAGES]))
-base_block_checksum, base_block_file_name = utilities.generate_sequence_block(SEQUENCE_IMAGES, save_file_name=save_file_name)
-assert base_block_checksum == 'd1de3dfc46a972d323c7b52b9fff78a9'
-stimulus_pilot_checksum_dict[base_block_file_name] = base_block_checksum
+# # Generate base sequence:
+# save_file_name = os.path.join(tgt_dir, '%s.npy' % '_'.join([str(x) for x in SEQUENCE_IMAGES]))
+# base_block_checksum, base_block_file_name = utilities.generate_sequence_block(SEQUENCE_IMAGES, save_file_name=save_file_name)
+# assert base_block_checksum == 'd1de3dfc46a972d323c7b52b9fff78a9'
+# stimulus_pilot_checksum_dict[base_block_file_name] = base_block_checksum
 
 # Generate oddball sequences: 
 for curr_checksum, oddball_id in zip(oddball_checksum_list, ODDBALL_IMAGES):
