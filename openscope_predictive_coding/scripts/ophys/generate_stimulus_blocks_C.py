@@ -95,11 +95,11 @@ for key_val in pair_timing_dict.items():
     pair_timing_list.append(key_val)
 stimulus_pilot_data['pair_timing'] = pair_timing_list
 
-# Generate randomized oddballs block:
-hab_randomized_control_full_sequence = utilities.get_shuffled_repeated_sequence(ODDBALL_IMAGES + SEQUENCE_IMAGES, 30, seed=1)
-hab_randomized_control_checksum, hab_randomized_control_file_name = utilities.generate_sequence_block(hab_randomized_control_full_sequence, save_file_name=os.path.join(tgt_dir, 'randomized_control_%s.npy' % session_type))
-assert hab_randomized_control_checksum == '3c71dd8b15d716eade27c4a2a394fa2e'
-stimulus_pilot_checksum_dict[hab_randomized_control_file_name] = hab_randomized_control_checksum
+# # Generate randomized oddballs block:
+# hab_randomized_control_full_sequence = utilities.get_shuffled_repeated_sequence(ODDBALL_IMAGES + SEQUENCE_IMAGES, 30, seed=1)
+# hab_randomized_control_checksum, hab_randomized_control_file_name = utilities.generate_sequence_block(hab_randomized_control_full_sequence, save_file_name=os.path.join(tgt_dir, 'randomized_control_%s.npy' % session_type))
+# assert hab_randomized_control_checksum == '3c71dd8b15d716eade27c4a2a394fa2e'
+# stimulus_pilot_checksum_dict[hab_randomized_control_file_name] = hab_randomized_control_checksum
 
 
 # Also add checksum for natural movie 1 from Brain Observatory:

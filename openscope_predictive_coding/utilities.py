@@ -65,6 +65,8 @@ def get_hash(data):
 
 def get_shuffled_repeated_sequence(src_sequence, number_of_shuffles, seed=None):
     
+    src_sequence = list(src_sequence)
+
     if seed is not None:
         random.seed(seed)
     

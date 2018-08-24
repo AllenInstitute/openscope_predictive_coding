@@ -61,23 +61,24 @@ def get_block(file_name, timing_list, frame_length, runs, t0):
 tf = 0
 stimuli = []
 
-# # Spontaneous gray screen block 1:
-# tf += 60
+# Spontaneous gray screen block 1:
+tf += 60
 
 # Randomized oddball block:
 t0 = tf
-file_name = os.path.join(data_path, '53_44_8_14_0dbffd94a00dc4e9ea22ad75662d36bd.npy')
+file_name = os.path.join(data_path, 'ophys_pilot_randomized_control_B_1ce104b1011311ac984e647054fd253f.npy')
 data = np.load(file_name)
 number_of_frames = data.shape[0]
-runs = 10
-frame_length = 1
+runs = 1
+frame_length = .25
 timing_list = [(ii*frame_length*number_of_frames, (ii+1)*frame_length*number_of_frames) for ii in range(runs)]
 curr_stimulus_list, tf = get_block(file_name, timing_list, frame_length, runs, t0=t0, )
 stimuli.append(curr_stimulus_list)
-# assert tf - t0 == expected_randomized_oddball_duration
+assert tf - t0 == expected_randomized_control_duration
 
-# # Spontaneous gray screen block 2:
-# tf += 60
+# Spontaneous gray screen block 2:
+tf += 60
+
 
 
 # # # Spontaneous gray screen block (offset):

@@ -63,15 +63,15 @@ stimulus_pilot_data = {}
 # assert base_block_checksum == '41e5f2b7f0fad6735a4eb566514efd1c'
 # stimulus_pilot_checksum_dict[base_block_file_name] = base_block_checksum
 
-# Generate oddball sequences: 
-for curr_checksum, oddball_id in zip(oddball_checksum_list, ODDBALL_IMAGES):
-    tmp_seq = [x for x in SEQUENCE_IMAGES]
-    tmp_seq[-1] = oddball_id
+# # Generate oddball sequences: 
+# for curr_checksum, oddball_id in zip(oddball_checksum_list, ODDBALL_IMAGES):
+#     tmp_seq = [x for x in SEQUENCE_IMAGES]
+#     tmp_seq[-1] = oddball_id
 
-    save_file_name = os.path.join(tgt_dir, '%s.npy' % '_'.join([str(x) for x in tmp_seq]))
-    curr_oddball_block_checksum, curr_oddball_block_file_name = utilities.generate_sequence_block(tmp_seq, save_file_name=save_file_name)
-    assert curr_oddball_block_checksum == curr_checksum
-    stimulus_pilot_checksum_dict[curr_oddball_block_file_name] = curr_oddball_block_checksum
+#     save_file_name = os.path.join(tgt_dir, '%s.npy' % '_'.join([str(x) for x in tmp_seq]))
+#     curr_oddball_block_checksum, curr_oddball_block_file_name = utilities.generate_sequence_block(tmp_seq, save_file_name=save_file_name)
+#     assert curr_oddball_block_checksum == curr_checksum
+#     stimulus_pilot_checksum_dict[curr_oddball_block_file_name] = curr_oddball_block_checksum
 
 # Generate transition pair sequences:
 pair_list = []
@@ -95,24 +95,24 @@ for key_val in pair_timing_dict.items():
     pair_timing_list.append(key_val)
 stimulus_pilot_data['pair_timing'] = pair_timing_list
 
-# Generate randomized oddballs block:
-hab_randomized_control_full_sequence = utilities.get_shuffled_repeated_sequence(ODDBALL_IMAGES + SEQUENCE_IMAGES, 30, seed=1)
-hab_randomized_control_checksum, hab_randomized_control_file_name = utilities.generate_sequence_block(hab_randomized_control_full_sequence, save_file_name=os.path.join(tgt_dir, 'randomized_control_%s.npy' % session_type))
-assert hab_randomized_control_checksum == '2c3fd3b6529df6160df336a16fdc9862'
-stimulus_pilot_checksum_dict[hab_randomized_control_file_name] = hab_randomized_control_checksum
+# # Generate randomized oddballs block:
+# hab_randomized_control_full_sequence = utilities.get_shuffled_repeated_sequence(ODDBALL_IMAGES + SEQUENCE_IMAGES, 30, seed=1)
+# hab_randomized_control_checksum, hab_randomized_control_file_name = utilities.generate_sequence_block(hab_randomized_control_full_sequence, save_file_name=os.path.join(tgt_dir, 'randomized_control_%s.npy' % session_type))
+# assert hab_randomized_control_checksum == '2c3fd3b6529df6160df336a16fdc9862'
+# stimulus_pilot_checksum_dict[hab_randomized_control_file_name] = hab_randomized_control_checksum
 
 
-# Also add checksum for natural movie 1 from Brain Observatory:
-stimulus_pilot_checksum_dict[os.path.join(tgt_dir, 'NATURAL_MOVIE_ONE.npy')] = 'b174ad09736c870c6915baf82cf2c9ad'
-stimulus_pilot_checksum_dict[os.path.join(tgt_dir, 'NATURAL_MOVIE_TWO.npy')] = '68e5976a140fe8400c6b7fe59073fe72'
+# # Also add checksum for natural movie 1 from Brain Observatory:
+# stimulus_pilot_checksum_dict[os.path.join(tgt_dir, 'NATURAL_MOVIE_ONE.npy')] = 'b174ad09736c870c6915baf82cf2c9ad'
+# stimulus_pilot_checksum_dict[os.path.join(tgt_dir, 'NATURAL_MOVIE_TWO.npy')] = '68e5976a140fe8400c6b7fe59073fe72'
 
 
-# Oddball data:
-oddball_list = []
-oddball_dict = utilities.generate_oddball_block_timing_dict(SEQUENCE_IMAGES, ODDBALL_IMAGES, expected_duration=2000.0, seed=0)
-for key_val in oddball_dict.items():
-    oddball_list.append(key_val)
-stimulus_pilot_data['oddball_timing'] = oddball_list
+# # Oddball data:
+# oddball_list = []
+# oddball_dict = utilities.generate_oddball_block_timing_dict(SEQUENCE_IMAGES, ODDBALL_IMAGES, expected_duration=2000.0, seed=0)
+# for key_val in oddball_dict.items():
+#     oddball_list.append(key_val)
+# stimulus_pilot_data['oddball_timing'] = oddball_list
 
 
 # Dump to pilot data directory:
