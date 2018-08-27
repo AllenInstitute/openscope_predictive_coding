@@ -6,9 +6,8 @@ import json
 from allensdk.core.brain_observatory_cache import BrainObservatoryCache
 import allensdk.brain_observatory.stimulus_info as si
 import openscope_predictive_coding as opc
-from openscope_predictive_coding.utilities import get_hash, apply_warp_natural_scene, apply_warp_natural_movie, luminance_match, downsample_monitor_to_template, get_shuffled_repeated_sequence, generate_sequence_block, seq_to_str, get_shuffled_repeated_sequence, generate_sequence_block, generate_oddball_block_timing_dict, generate_pair_block_timing_dict
-from utilities import memoized
-
+from openscope_predictive_coding.utilities import get_hash, apply_warp_natural_scene, apply_warp_natural_movie, luminance_match, downsample_monitor_to_template, get_shuffled_repeated_sequence, generate_sequence_block, seq_to_str, get_shuffled_repeated_sequence, generate_sequence_block, generate_oddball_block_timing_dict, generate_pair_block_timing_dict, memoized
+from occlusion import get_occlusion_data_metadata
 
 default_manifest = os.path.join(opc.boc_path, 'boc/manifest.json')
 default_data_path = opc.data_path
@@ -40,6 +39,7 @@ hash_dict = {
             'ophys_pilot_randomized_control_A':"598ac1255d9c8e09541ae1f57034fac3",
             'ophys_pilot_randomized_control_B':"1ce104b1011311ac984e647054fd253f",
             'ophys_pilot_randomized_control_C':"9864cb4ff0140082826f46608ebeb6cc",
+            'ophys_pilot_occlusion':"8e3b57fa469782eb610ba2bfad2c4f37",
             (68, 78, 13, 6):"e7c9e5b69add976b510ee8e85fc9a451",
             (68, 78, 13, 22):"eb69aeef83b4852217df8f8a2eb529c7",
             (68, 78, 13, 51):"b8b6a093ff7955ea8fd2cb48bd5ffa3c",
@@ -395,10 +395,30 @@ def save_transition_pair_timing_dict(session, data_path=default_data_path):
     save_file_name = os.path.join(data_path, 'transition_pair_timing_data_%s.json' % session)
     json.dump(transition_pair_list, open(save_file_name, 'w'))
 
-# def
+def get_occlusion_data(data_path=default_data_path):
+
+    stimulus_key = 'ophys_pilot_occlusion'
+    dataset_path = get_stimulus_path(stimulus_key, data_path=data_path)
+    data_hash = hash_dict[stimulus_key]
+
+    if os.path.exists(dataset_path):
+        data = np.load(dataset_path)
+    else:
+
+        src_image_data = get_stimulus_template(NATURAL_SCENES_WARPED)
+        data, _ =  get_occlusion_data_metadata(opc.ODDBALL_IMAGES['A'], src_image_data)
+        assert data_hash == get_hash(data)
+        np.save(dataset_path, data)
+        
+    assert data_hash == get_hash(data)
+    
+    return data
+
 
 if __name__ == "__main__":
-    
+
+
+
     # for stimulus in STIMULUS_LIST:
     # template = get_stimulus_template(si.NATURAL_SCENES+'_warped')
     # for key, val in opc.SEQUENCE_IMAGES.items():
@@ -420,4 +440,5 @@ if __name__ == "__main__":
     # save_transition_pair_timing_dict('B')
     # save_transition_pair_timing_dict('C')
 
+    get_occlusion_data()
 
