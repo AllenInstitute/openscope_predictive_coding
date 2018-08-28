@@ -5,6 +5,7 @@ from intervaltree import Interval, IntervalTree
 import pandas as pd
 import collections
 import sys
+import os
 
 from openscope_predictive_coding.stimulus import hash_lookup, get_pilot_randomized_control, get_occlusion_metadata
 import openscope_predictive_coding as opc
@@ -18,7 +19,8 @@ pd.options.display.float_format = '{:,.2f}'.format
 session_type = 'A'
 data_path = opc.data_path
 
-file_name = '/home/nicholasc/projects/openscope_predictive_coding/openscope_predictive_coding/scripts/ophys/interval_data_%s.json' % session_type
+dir_path = os.path.dirname(os.path.realpath(__file__))
+file_name = os.path.join(dir_path, 'scripts','ophys','interval_data_%s.json' % session_type)
 interval_data = json.load(open(file_name, 'r'))
 _, pilot_randomized_control_full_sequence = get_pilot_randomized_control(session_type, data_path=data_path)
 occlusion_df = get_occlusion_metadata(data_path=data_path)
@@ -73,7 +75,8 @@ for block_key, interval_list in interval_data.items():
                 raise Exception
 
 df = pd.DataFrame(df_data)
-df.to_csv('stimtable_%s.csv' % session_type)
+print df.head()
+# df.to_csv('stimtable_%s.csv' % session_type)
 
 
 
