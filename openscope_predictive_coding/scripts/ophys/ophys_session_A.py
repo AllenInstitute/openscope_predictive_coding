@@ -11,6 +11,7 @@ import numpy as np
 import hashlib
 import json
 import warnings
+import collections
 
 
 # data_path = r'//allen/aibs/technology/nicholasc/openscope'
@@ -18,6 +19,7 @@ import warnings
 warnings.warn('DEV PATH IN USE')
 data_path = r'//allen/aibs/technology/nicholasc/openscope_dev'
 
+save_interval_data = True
 expected_gray_screen_duration = 60.0
 expected_randomized_control_duration = 105.0
 expected_oddball_stimulus_list_duration = 2000.0
@@ -143,8 +145,8 @@ window = Window(fullscr=True,
                 monitor='Gamma1.Luminance50',
                 screen=0)
 
-interval_data = []
-def get_block(file_name, timing_list, frame_length, runs, t0):
+interval_data = collections.defaultdict(list)
+def get_block(file_name, timing_list, frame_length, runs, t0, block_key):
     
     base_seq_stim = MovieStim(movie_path=file_name,
                                     window=window,
@@ -162,7 +164,7 @@ def get_block(file_name, timing_list, frame_length, runs, t0):
         t_start_new = t_start+t0
         t_end_new = t_end+t0
         timing_list_new.append((t_start_new, t_end_new))
-        interval_data.append(((t_start_new, t_end_new), file_name, runs))
+        interval_data[block_key].append(((t_start_new, t_end_new), file_name, frame_length, runs))
         if t_end_new > timing_hwm:
             timing_hwm = t_end_new
 
@@ -184,7 +186,7 @@ number_of_frames = data.shape[0]
 runs = 1
 frame_length = .25
 timing_list = [(ii*frame_length*number_of_frames, (ii+1)*frame_length*number_of_frames) for ii in range(runs)]
-curr_stimulus_list, tf = get_block(file_name, timing_list, frame_length, runs, t0=t0, )
+curr_stimulus_list, tf = get_block(file_name, timing_list, frame_length, runs, t0=t0, block_key='randomized_control_pre')
 stimuli.append(curr_stimulus_list)
 assert tf - t0 == expected_randomized_control_duration
 
@@ -199,7 +201,7 @@ tf_list = []
 frame_length = .25
 for pattern, timing_list in oddball_list:
     file_name = os.path.join(data_path, '%s_%s.npy' % ('_'.join([str(x) for x in pattern]), hash_dict[tuple(pattern)]))
-    curr_stim, curr_tf = get_block(file_name, timing_list, frame_length, len(timing_list), t0=t0, )
+    curr_stim, curr_tf = get_block(file_name, timing_list, frame_length, len(timing_list), t0=t0, block_key='oddball')
     oddball_stimulus_list.append(curr_stim)
     tf_list.append(curr_tf)
 tf = max(tf_list)
@@ -217,7 +219,7 @@ tf_list = []
 frame_length = .25
 for pattern, timing_list in pair_list:
     file_name = os.path.join(data_path, '%s_%s.npy' % ('_'.join([str(x) for x in pattern]), hash_dict[tuple(pattern)]))
-    curr_stim, curr_tf = get_block(file_name, timing_list, frame_length, len(timing_list), t0=t0, )
+    curr_stim, curr_tf = get_block(file_name, timing_list, frame_length, len(timing_list), t0=t0, block_key='transition_control')
     pair_stimulus_list.append(curr_stim)
     tf_list.append(curr_tf)
 tf = max(tf_list)
@@ -235,7 +237,7 @@ number_of_frames = data.shape[0]
 runs = 1
 frame_length = .5
 timing_list = [(.5+ii, (ii+1)) for ii in range(number_of_frames)] 
-curr_stimulus_list, tf = get_block(file_name, timing_list, frame_length, runs, t0=t0)
+curr_stimulus_list, tf = get_block(file_name, timing_list, frame_length, runs, t0=t0, block_key='occlusion')
 stimuli.append(curr_stimulus_list)
 assert tf - t0 == expected_occlusion_duration
 
@@ -250,14 +252,14 @@ number_of_frames = data.shape[0]
 runs = 10
 frame_length = 2.0/60.0
 timing_list = [(ii*frame_length*number_of_frames, (ii+1)*frame_length*number_of_frames) for ii in range(runs)]
-curr_stimulus_list, tf = get_block(file_name, timing_list, frame_length, runs, t0=t0)
+curr_stimulus_list, tf = get_block(file_name, timing_list, frame_length, runs, t0=t0, block_key='natural_movie_one')
 stimuli.append(curr_stimulus_list)
 assert tf - t0 == expected_familiar_movie_duration
 
 # Spontaneous gray screen block 5:
 tf += 60
 
-# Randomized oddball block:
+# Randomized control block:
 t0 = tf
 file_name = os.path.join(data_path, 'ophys_pilot_randomized_control_A_598ac1255d9c8e09541ae1f57034fac3.npy')
 data = np.load(file_name)
@@ -265,15 +267,13 @@ number_of_frames = data.shape[0]
 runs = 1
 frame_length = .25
 timing_list = [(ii*frame_length*number_of_frames, (ii+1)*frame_length*number_of_frames) for ii in range(runs)]
-curr_stimulus_list, tf = get_block(file_name, timing_list, frame_length, runs, t0=t0, )
+curr_stimulus_list, tf = get_block(file_name, timing_list, frame_length, runs, t0=t0, block_key='randomized_control_post')
 stimuli.append(curr_stimulus_list)
 assert tf - t0 == expected_randomized_control_duration
 
-json.dump(interval_data, open('interval_data_%s.json' % session_type, 'w'))
-# for ii in interval_data:
-#     print ii
-
-sys.exit()
+if save_interval_data:
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    json.dump(interval_data, open(os.path.join(dir_path, 'interval_data_%s.json' % session_type), 'w'))
 
 assert tf == expected_total_duration
 params = {}

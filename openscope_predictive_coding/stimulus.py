@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import hashlib
+import pandas as pd
 import json
 
 from allensdk.core.brain_observatory_cache import BrainObservatoryCache
@@ -144,6 +145,12 @@ hash_dict = {
             (35, 114):"a42192da281a9bbeca2b5debbdcc5f07",
             }
 
+@memoized
+def hash_lookup(hash):
+    for key, val in hash_dict.items():
+        if val == hash:
+            return key
+
 
 STIMULUS_LIST = TEMPLATE_LIST+TEMPLATE_LIST_WARPED+HABITUATION_PILOT_DATA
 
@@ -286,13 +293,13 @@ def get_pilot_randomized_control(session, data_path=default_data_path):
     data_hash = hash_dict[session_key]
     dataset_path = get_stimulus_path(session_key, data_path=data_path)
 
+    ODDBALL_IMAGES = opc.ODDBALL_IMAGES[session]
+    SEQUENCE_IMAGES = opc.SEQUENCE_IMAGES[session]
+    pilot_randomized_control_full_sequence = get_shuffled_repeated_sequence(ODDBALL_IMAGES + SEQUENCE_IMAGES, 30, seed=1)
+    
     if os.path.exists(dataset_path):
         data = np.load(dataset_path)
     else:
-
-        ODDBALL_IMAGES = opc.ODDBALL_IMAGES[session]
-        SEQUENCE_IMAGES = opc.SEQUENCE_IMAGES[session]
-        pilot_randomized_control_full_sequence = get_shuffled_repeated_sequence(ODDBALL_IMAGES + SEQUENCE_IMAGES, 30, seed=1)
         
         src_image_data = get_stimulus_template(NATURAL_SCENES_WARPED)
         data = generate_sequence_block(pilot_randomized_control_full_sequence, src_image_data)
@@ -301,7 +308,7 @@ def get_pilot_randomized_control(session, data_path=default_data_path):
         np.save(dataset_path, data)
     
     assert data_hash == get_hash(data)
-    return data
+    return data, pilot_randomized_control_full_sequence
 
 
 def get_oddball_data(session, data_path=default_data_path):
@@ -413,6 +420,10 @@ def get_occlusion_data(data_path=default_data_path):
     assert data_hash == get_hash(data)
     
     return data
+
+def get_occlusion_metadata(data_path=default_data_path):
+
+    return pd.read_csv(os.path.join(data_path, 'natural_scenes_occlusion_warped.csv'), index_col=0)
 
 
 if __name__ == "__main__":
