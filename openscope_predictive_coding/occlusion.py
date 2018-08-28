@@ -108,7 +108,7 @@ def get_occlusion_data_metadata(img_num_list, src_image_data, seed=0, metadata=T
 
                 print curr_fraction, 'num_dots: %s' % num_dots, 'img_num: %s' % img_num, 'repeat_ii: %s' % repeat_ii
 
-                final_image = (img_lummatched[img_num,::-1,:] - 127.)*curr_mast_warp[::2,::2] + 127.
+                final_image = (img_lummatched[img_num,:,:] - 127.)*curr_mast_warp[::2,::2] + 127.
                 img_list.append({'image': final_image,
                                 'repeat': repeat_ii,
                                 'fraction_occlusion': opc.OCCLUSION_NUM_DOT_to_FRACTION[num_dots],

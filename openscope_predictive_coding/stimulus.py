@@ -33,13 +33,13 @@ hash_dict = {
             si.NATURAL_MOVIE_ONE + '_warped': '77ee4ecd0dc856c80cf24621303dd080',
             NATURAL_SCENES_WARPED: '8ba4262b06ec81c3ec8d3d7d7831e564',
             HABITUATION_PILOT_RANDOMIZED_ODDBALL: '5cd9854e9cb07a427180d6e130c148ab',
-            opc.SEQUENCE_IMAGES['A']: '2950e8d1e5187ce65ac40f5381be0b3f',
-            opc.SEQUENCE_IMAGES["C"]:'e17602dcefbd0e2ec66f81b46e4583f0',
-            opc.SEQUENCE_IMAGES["B"]:'0dbffd94a00dc4e9ea22ad75662d36bd',
+            (68, 78, 13, 26): '2950e8d1e5187ce65ac40f5381be0b3f',
+            (114, 23, 65, 101):'e17602dcefbd0e2ec66f81b46e4583f0',
+            (53, 44, 8, 14):'0dbffd94a00dc4e9ea22ad75662d36bd',
             'ophys_pilot_randomized_control_A':"598ac1255d9c8e09541ae1f57034fac3",
             'ophys_pilot_randomized_control_B':"1ce104b1011311ac984e647054fd253f",
             'ophys_pilot_randomized_control_C':"9864cb4ff0140082826f46608ebeb6cc",
-            'ophys_pilot_occlusion':"8e3b57fa469782eb610ba2bfad2c4f37",
+            'ophys_pilot_occlusion':"659b61b30d270bb849a7c4a903125e02",
             (68, 78, 13, 6):"e7c9e5b69add976b510ee8e85fc9a451",
             (68, 78, 13, 22):"eb69aeef83b4852217df8f8a2eb529c7",
             (68, 78, 13, 51):"b8b6a093ff7955ea8fd2cb48bd5ffa3c",
@@ -422,8 +422,9 @@ if __name__ == "__main__":
     # for stimulus in STIMULUS_LIST:
     # template = get_stimulus_template(si.NATURAL_SCENES+'_warped')
     # for key, val in opc.SEQUENCE_IMAGES.items():
-        # print 'opc.SEQUENCE_IMAGES["%s"]:"%s",' % (key, get_sequence_hash(val))
-        # print get_stimulus_template(val)
+        # print key, val
+        # print 'opc.SEQUENCE_IMAGES["%s"]:"%s",' % (key, val))
+        # print val, get_hash(get_stimulus_template(val))
     # template = 
 
     # get_stimulus_template(si.NATURAL_SCENES + '_warped')
@@ -433,7 +434,7 @@ if __name__ == "__main__":
     # get_oddball_data('B')
     # get_oddball_data('C')
     # get_oddball_data('A')
-    # get_transition_pair_data('A')
+    # print get_stimulus_template((68, 78, 13, 26)).shape
     # get_transition_pair_data('B')
     # get_transition_pair_data('C')
     # save_transition_pair_timing_dict('A')
@@ -441,4 +442,6 @@ if __name__ == "__main__":
     # save_transition_pair_timing_dict('C')
 
     get_occlusion_data()
+    # for key, val in opc.SEQUENCE_IMAGES.items():
+    #     print key, val
 
