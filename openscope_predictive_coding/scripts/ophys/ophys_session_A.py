@@ -196,7 +196,7 @@ oddball_stimulus_list = []
 tf_list = []
 frame_length = .25
 for pattern, timing_list in oddball_list:
-    file_name = '%s_%s.npy' % ('_'.join([str(x) for x in pattern]), hash_dict[tuple(pattern)])
+    file_name = os.path.join(data_path, '%s_%s.npy' % ('_'.join([str(x) for x in pattern]), hash_dict[tuple(pattern)]))
     curr_stim, curr_tf = get_block(file_name, timing_list, frame_length, len(timing_list), t0=t0, )
     oddball_stimulus_list.append(curr_stim)
     tf_list.append(curr_tf)
@@ -214,7 +214,7 @@ pair_stimulus_list = []
 tf_list = []
 frame_length = .25
 for pattern, timing_list in pair_list:
-    file_name = '%s_%s.npy' % ('_'.join([str(x) for x in pattern]), hash_dict[tuple(pattern)])
+    file_name = os.path.join(data_path, '%s_%s.npy' % ('_'.join([str(x) for x in pattern]), hash_dict[tuple(pattern)]))
     curr_stim, curr_tf = get_block(file_name, timing_list, frame_length, len(timing_list), t0=t0, )
     pair_stimulus_list.append(curr_stim)
     tf_list.append(curr_tf)
