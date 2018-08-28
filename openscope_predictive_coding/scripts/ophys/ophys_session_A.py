@@ -143,8 +143,7 @@ window = Window(fullscr=True,
                 monitor='Gamma1.Luminance50',
                 screen=0)
 
-from intervaltree import Interval, IntervalTree
-it = IntervalTree()
+interval_data = []
 def get_block(file_name, timing_list, frame_length, runs, t0):
     
     base_seq_stim = MovieStim(movie_path=file_name,
@@ -163,6 +162,7 @@ def get_block(file_name, timing_list, frame_length, runs, t0):
         t_start_new = t_start+t0
         t_end_new = t_end+t0
         timing_list_new.append((t_start_new, t_end_new))
+        interval_data.append(((t_start_new, t_end_new), file_name, runs))
         if t_end_new > timing_hwm:
             timing_hwm = t_end_new
 
@@ -269,6 +269,10 @@ curr_stimulus_list, tf = get_block(file_name, timing_list, frame_length, runs, t
 stimuli.append(curr_stimulus_list)
 assert tf - t0 == expected_randomized_control_duration
 
+for ii in interval_data:
+    print ii
+
+sys.exit()
 
 assert tf == expected_total_duration
 params = {}
