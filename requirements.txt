@@ -1,1 +1,4 @@
 allensdk
+intervaltree
+pandas
+numpy

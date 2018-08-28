@@ -143,6 +143,8 @@ window = Window(fullscr=True,
                 monitor='Gamma1.Luminance50',
                 screen=0)
 
+from intervaltree import Interval, IntervalTree
+it = IntervalTree()
 def get_block(file_name, timing_list, frame_length, runs, t0):
     
     base_seq_stim = MovieStim(movie_path=file_name,
