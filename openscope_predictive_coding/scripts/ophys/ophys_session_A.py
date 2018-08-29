@@ -14,10 +14,7 @@ import warnings
 import collections
 
 
-# data_path = r'//allen/aibs/technology/nicholasc/openscope'
-
-warnings.warn('DEV PATH IN USE')
-data_path = r'//allen/aibs/technology/nicholasc/openscope_dev'
+data_path = r'//allen/aibs/technology/nicholasc/openscope'
 
 save_interval_data = False
 expected_gray_screen_duration = 60.0
