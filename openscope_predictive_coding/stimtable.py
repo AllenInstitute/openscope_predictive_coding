@@ -1,7 +1,6 @@
 import json
 import numpy as np
 import warnings
-from intervaltree import Interval, IntervalTree
 import pandas as pd
 import collections
 import sys
