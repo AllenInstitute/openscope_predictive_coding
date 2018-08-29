@@ -1,4 +1,5 @@
 allensdk
 intervaltree
-pandas
-numpy
+pandas=='0.23.0'
+scipy=='1.0.1'
+numpy=='1.14.3'
