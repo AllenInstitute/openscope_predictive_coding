@@ -46,6 +46,7 @@ def apply_warp_on_monitor(img):
     fig, ax = plt.subplots(1,1)
     monitor.show_image(img, ax=ax, warp=True, mask=False, show=False)
     img_warped = one([obj for obj in ax.get_children() if isinstance(obj, mpl.image.AxesImage)]).get_array()
+    plt.close()
     assert img_warped.shape == si.MONITOR_DIMENSIONS
     return img_warped
 
