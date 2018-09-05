@@ -119,4 +119,9 @@ f = Foraging(window=window,
             nidaq_tasks={'digital_input': ss.di,
                         'digital_output': ss.do,})  #share di and do with SS
 ss.add_item(f, "foraging")
+
+
+from mcc import add_frame_dir
+add_frame_dir(ss, output_dir='.')
+
 ss.run()
