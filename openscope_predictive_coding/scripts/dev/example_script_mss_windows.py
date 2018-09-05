@@ -44,18 +44,13 @@ def add_frame_dir(sweep_stim, output_dir='.'):
             if (m._bbox["height"], m._bbox["width"]) != (height, width):
                 m._bbox = monitor
                 m._bmi.bmiHeader.biWidth = width
-                m._bmi.bmiHeader.biHeight = -height  # Why minus? [1]
-                # m._data = ctypes.create_string_buffer(width * height * 4)  # [2]
-                # m._bmp = gdi.CreateCompatibleBitmap(m._srcdc, width, height)
-                # gdi.SelectObject(m._memdc, m._bmp)
+                m._bmi.bmiHeader.biHeight = -height
 
             m._srcdc = ctypes.windll.user32.GetWindowDC(0)
             m._memdc = ctypes.windll.gdi32.CreateCompatibleDC(m._srcdc)
             m._data = ctypes.create_string_buffer(width * height * 4)  # [2]
             m._bmp = gdi.CreateCompatibleBitmap(m._srcdc, width, height)
             gdi.SelectObject(m._memdc, m._bmp)
-
-
 
             gdi.BitBlt(
                 m._memdc,
@@ -80,29 +75,6 @@ def add_frame_dir(sweep_stim, output_dir='.'):
             for attr in (m._memdc, m._srcdc, m._data, m._bmp):
                 if attr:
                     ctypes.windll.gdi32.DeleteObject(attr)
-
-            # ximage = m.xlib.XGetImage(
-            #             m.display,
-            #             m.drawable,
-            #             monitor["left"],
-            #             monitor["top"],
-            #             monitor["width"],
-            #             monitor["height"],
-            #             PLAINMASK,
-            #             ZPIXMAP,
-            #         )
-            # data = ctypes.cast(ximage.contents.data,
-            #                 ctypes.POINTER(ctypes.c_ubyte * monitor["height"] * monitor["width"] * 4),)
-            # data_contents = bytearray(data.contents)
-            # m.xlib.XDestroyImage(ximage)
-            # curr_frame_hash = xxhash.xxh64(data_contents).digest()
-            
-            
-            # sweep_stim.window.getMovieFrame()
-            # data_contents = sweep_stim.window.movieFrames.pop()
-            # tmp = data_contents.resize((data_contents.size[0]/8, data_contents.size[1]/8))
-            # curr_frame = np.array(tmp)
-            # curr_frame_hash = xxhash.xxh64(curr_frame).digest()
 
             if curr_frame_hash not in image_dict:
                 image_dict[curr_frame_hash] = data_contents
