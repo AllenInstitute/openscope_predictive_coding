@@ -1,5 +1,7 @@
 .idea
 openscope_predictive_coding.egg-info
+*.npy
+**/.ipynb_checkpoints
 boc
 .history
 *.pyc

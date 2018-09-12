@@ -11,6 +11,7 @@ import scipy.optimize as sopt
 import collections
 import functools
 import json
+import skimage.io as sio
 
 import openscope_predictive_coding as opc
 import allensdk.brain_observatory.stimulus_info as si
@@ -272,7 +273,12 @@ def get_timing_dict(session, replace_base=True, data_path=opc.data_path):
         return new_data
     else:
         return data
-        
+
+def tiff_to_numpy(input_file_name):
+    assert input_file_name[-4:] == '.tif'
+    save_file_name = input_file_name[:-4] + '.npy'
+    print save_file_name
+    np.save(save_file_name, sio.imread(input_file_name))
 
 if __name__ == "__main__":
     
