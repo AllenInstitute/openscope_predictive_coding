@@ -12,6 +12,8 @@ import collections
 import functools
 import json
 import skimage.io as sio
+import pandas as pd
+import sys
 
 import openscope_predictive_coding as opc
 import allensdk.brain_observatory.stimulus_info as si
@@ -262,25 +264,164 @@ class memoized(object):
       '''Support instance methods.'''
       return functools.partial(self.__call__, obj)
 
-def get_timing_dict(session, replace_base=True, data_path=opc.data_path):
-    
-    data = json.load(open(os.path.join(opc.timing_path, 'timing_%s.json' % session), 'r'))
-    
-    if replace_base == True:
-        new_data = {}
-        for key in data:
-            new_data[key] = os.path.join(data_path, os.path.basename(key))
-        return new_data
-    else:
-        return data
-
 def tiff_to_numpy(input_file_name):
     assert input_file_name[-4:] == '.tif'
     save_file_name = input_file_name[:-4] + '.npy'
     print save_file_name
     np.save(save_file_name, sio.imread(input_file_name))
 
+def get_stimtable(version=1, **kwargs):
+
+    if version==1:
+        session = kwargs['session']
+        data_path = kwargs.get('data_path', opc.stimtable_path)
+        return get_stimtable_v1(session, data_path=data_path)
+    else:
+        raise RuntimeError
+
+def file_name_to_stimulus_hash(file_name):
+    f, file_extension = os.path.splitext(os.path.basename(file_name))
+    return f.split('_')[-1]
+
+def get_stimtable_v1(session, data_path=opc.stimtable_path):
+
+    occlusion_metadata_df = opc.stimulus.get_occlusion_metadata()
+    _, pilot_randomized_control_full_sequence = opc.stimulus.get_pilot_randomized_control(session, data_path=data_path)
+
+    hash_dict_rev = {hash:key for key, hash in opc.stimulus.hash_dict.items()}
+    data_block_dict = {}
+    
+    file_path = os.path.join(data_path, 'interval_data_{session}.json'.format(session=session))
+
+    data = json.load(open(file_path, 'r'))
+
+    df_dict = collections.defaultdict(list)
+    for session_block_name in data.keys():
+        for interval_data in data[session_block_name]:
+            (t_start, t_end), file_name, frame_length, number_of_runs = interval_data
+            curr_hash = file_name_to_stimulus_hash(file_name)
+
+            if curr_hash not in data_block_dict:
+                data_block_dict[curr_hash] = np.load(file_name)
+
+            stimulus_key = hash_dict_rev[curr_hash]
+            if isinstance(stimulus_key, (tuple,)):
+                image_id_tuple = stimulus_key
+                data_file_index_tuple = range(len(image_id_tuple))
+            else:
+                image_id_tuple = None
+                data_file_index_tuple = tuple(range(data_block_dict[curr_hash].shape[0]))
+
+                if t_end - t_start != frame_length*len(data_file_index_tuple):
+
+                    # Occlusion
+                    data_file_index_tuple = stimulus_key
+
+            # Build Dataframe:
+            df_dict['stimulus_key'].append(stimulus_key)
+            df_dict['start'].append(t_start)
+            df_dict['end'].append(t_end)
+            df_dict['frame_length'].append(frame_length)
+            df_dict['image_id_tuple'].append(image_id_tuple)
+            df_dict['data_file_index_tuple'].append(data_file_index_tuple)
+            df_dict['data_file_name'].append(file_name)
+            df_dict['session_block_name'].append(session_block_name)
+            
+            
+
+
+    df_main = df = pd.DataFrame(df_dict)
+    expanded_df_list = []
+
+    # Expand occlusion:
+    sorted_occlusion_df = df[df['data_file_index_tuple']=='ophys_pilot_occlusion'].sort_values('start').reset_index().rename(columns={'index':'fk'})[['fk']]
+    occlusion_df = sorted_occlusion_df.join(occlusion_metadata_df).set_index('fk').join(df).drop(['data_file_index_tuple','data_file_name', 'image_id_tuple', 'stimulus_key', 'session_block_name'], axis=1)
+    occlusion_df = occlusion_df.rename(columns={'start':'start_time', 'end':'end_time', 'frame_length':'duration'})
+    occlusion_df['data_file_index'] = range(len(occlusion_df))
+    expanded_df_list.append(occlusion_df)
+    df = df[~df.index.isin(set.union(*[set(x.index) for x in expanded_df_list]))]
+    
+    # Expand Natural Movie:
+    new_df_dict = collections.defaultdict(list)
+    sorted_movie_df = df[df['stimulus_key']=='natural_movie_one_warped'].sort_values('start').reset_index().rename(columns={'index':'fk'})
+    for repeat, row in sorted_movie_df.iterrows():
+        assert row['end'] - row['start'] == row['frame_length']*len(row['data_file_index_tuple'])
+ 
+        for data_file_index in row['data_file_index_tuple']:
+            start_time = row['start']+data_file_index*row['frame_length']
+            end_time = start_time + row['frame_length']
+            
+            new_df_dict['duration'].append(end_time - start_time)
+            new_df_dict['start_time'].append(start_time)
+            new_df_dict['end_time'].append(end_time)
+            new_df_dict['repeat'].append(repeat)
+            new_df_dict['data_file_index'].append(data_file_index)
+            new_df_dict['fk'].append(row['fk'])
+
+    natural_movie_df = pd.DataFrame(new_df_dict).set_index('fk')
+    expanded_df_list.append(natural_movie_df)
+    df = df[~df.index.isin(set.union(*[set(x.index) for x in expanded_df_list]))]
+
+    # Expand randomized control:
+    new_df_dict = collections.defaultdict(list)
+    randomized_control_df = df[df['stimulus_key']=='ophys_pilot_randomized_control_A'].sort_values('start').reset_index().rename(columns={'index':'fk'})
+    for _, row in randomized_control_df.iterrows():
+        assert row['end'] - row['start'] == row['frame_length']*len(row['data_file_index_tuple'])
+
+        for data_file_index in row['data_file_index_tuple']:
+            start_time = row['start']+data_file_index*row['frame_length']
+            end_time = start_time + row['frame_length']
+            
+            new_df_dict['duration'].append(end_time - start_time)
+            new_df_dict['image_id'].append(pilot_randomized_control_full_sequence[data_file_index])
+            new_df_dict['start_time'].append(start_time)
+            new_df_dict['end_time'].append(end_time)
+            new_df_dict['data_file_index'].append(data_file_index)
+            new_df_dict['fk'].append(row['fk'])
+
+
+    randomized_control = pd.DataFrame(new_df_dict).set_index('fk')
+    expanded_df_list.append(randomized_control)
+    df = df[~df.index.isin(set.union(*[set(x.index) for x in expanded_df_list]))]
+
+    # Expand tuples:
+    new_df_dict = collections.defaultdict(list)
+    for fk, row in df.iterrows():
+        assert row['end'] - row['start'] == row['frame_length']*len(row['data_file_index_tuple'])
+        assert isinstance(row['stimulus_key'], tuple)
+
+        for data_file_index in row['data_file_index_tuple']:
+            start_time = row['start']+data_file_index*row['frame_length']
+            end_time = start_time + row['frame_length']
+            
+            image_id = row['image_id_tuple'][data_file_index]
+            new_df_dict['duration'].append(end_time - start_time)
+            new_df_dict['start_time'].append(start_time)
+            new_df_dict['end_time'].append(end_time)
+            new_df_dict['data_file_index'].append(data_file_index)
+            new_df_dict['image_id'].append(image_id)
+            new_df_dict['fk'].append(fk)
+
+    individual_frame_df = pd.DataFrame(new_df_dict).set_index('fk')
+    expanded_df_list.append(individual_frame_df)
+    df = df[~df.index.isin(set.union(*[set(x.index) for x in expanded_df_list]))]
+    assert len(df) == 0
+
+    b = df_main.drop(['data_file_index_tuple','image_id_tuple', 'start', 'end'], axis=1)
+    b.index.name = 'fk'
+
+
+    expanded_df_list_join = [a.join(b) for a in expanded_df_list]
+    
+    df_final = pd.concat(expanded_df_list_join).sort_values('start_time')
+    
+    return df_final
+    
+    
+
+
+
 if __name__ == "__main__":
     
     # Debugging:
-    print get_timing_dict('habituation')
+    get_stimtable(session='A')

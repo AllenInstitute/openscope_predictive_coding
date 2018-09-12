@@ -2,7 +2,7 @@ import os
 import numpy as np
 
 data_path = os.path.join(os.path.dirname(__file__), 'data')
-timing_path = os.path.join(os.path.dirname(__file__), 'timing')
+stimtable_path = os.path.join(os.path.dirname(__file__), 'scripts', 'ophys')
 boc_path = '/home/nicholasc/boc'
 
 SEQUENCE_IMAGES = {}
@@ -29,10 +29,10 @@ assert SCREEN_W == IMAGE_W*2 and SCREEN_H == IMAGE_H*2
 
 from .utilities import memoized
 
-@memoized
-def get_dataset_template(key):
-    curr_path = os.path.join(data_path, 'templates', '%s.npy' % key)
-    return np.load(curr_path)
+# @memoized
+# def get_dataset_template(key):
+#     curr_path = os.path.join(data_path, 'templates', '%s.npy' % key)
+#     return np.load(curr_path)
 
 @memoized
 def get_dataset(key):
