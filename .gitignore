@@ -1,3 +1,5 @@
+*.npy
+**/.ipynb_checkpoints
 boc
 .history
 *.pyc
