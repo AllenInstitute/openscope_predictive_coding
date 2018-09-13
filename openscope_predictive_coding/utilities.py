@@ -5,6 +5,7 @@ import hashlib
 import copy
 from collections import defaultdict
 import matplotlib.pyplot as plt
+import pickle
 import matplotlib as mpl
 import tempfile
 import scipy.optimize as sopt
@@ -270,20 +271,11 @@ def tiff_to_numpy(input_file_name):
     print save_file_name
     np.save(save_file_name, sio.imread(input_file_name))
 
-def get_stimtable(version=1, **kwargs):
-
-    if version==1:
-        session = kwargs['session']
-        data_path = kwargs.get('data_path', opc.stimtable_path)
-        return get_stimtable_v1(session, data_path=data_path)
-    else:
-        raise RuntimeError
-
 def file_name_to_stimulus_hash(file_name):
     f, file_extension = os.path.splitext(os.path.basename(file_name))
     return f.split('_')[-1]
 
-def get_stimtable_v1(session, data_path=opc.stimtable_path):
+def get_interval_table_v1(session, data_path=opc.stimtable_path):
 
     occlusion_metadata_df = opc.stimulus.get_occlusion_metadata()
     _, pilot_randomized_control_full_sequence = opc.stimulus.get_pilot_randomized_control(session, data_path=data_path)
@@ -329,7 +321,6 @@ def get_stimtable_v1(session, data_path=opc.stimtable_path):
             
             
 
-
     df_main = df = pd.DataFrame(df_dict)
     expanded_df_list = []
 
@@ -341,48 +332,52 @@ def get_stimtable_v1(session, data_path=opc.stimtable_path):
     expanded_df_list.append(occlusion_df)
     df = df[~df.index.isin(set.union(*[set(x.index) for x in expanded_df_list]))]
     
-    # Expand Natural Movie:
-    new_df_dict = collections.defaultdict(list)
-    sorted_movie_df = df[df['stimulus_key']=='natural_movie_one_warped'].sort_values('start').reset_index().rename(columns={'index':'fk'})
-    for repeat, row in sorted_movie_df.iterrows():
-        assert row['end'] - row['start'] == row['frame_length']*len(row['data_file_index_tuple'])
- 
-        for data_file_index in row['data_file_index_tuple']:
-            start_time = row['start']+data_file_index*row['frame_length']
-            end_time = start_time + row['frame_length']
-            
-            new_df_dict['duration'].append(end_time - start_time)
-            new_df_dict['start_time'].append(start_time)
-            new_df_dict['end_time'].append(end_time)
-            new_df_dict['repeat'].append(repeat)
-            new_df_dict['data_file_index'].append(data_file_index)
-            new_df_dict['fk'].append(row['fk'])
+    # Expand Natural Movies:
+    for movie_stimulus_key in [x for x in df['stimulus_key'].unique() if 'natural_movie' in x]:
 
-    natural_movie_df = pd.DataFrame(new_df_dict).set_index('fk')
-    expanded_df_list.append(natural_movie_df)
-    df = df[~df.index.isin(set.union(*[set(x.index) for x in expanded_df_list]))]
+        new_df_dict = collections.defaultdict(list)
+        sorted_movie_df = df[df['stimulus_key']==movie_stimulus_key].sort_values('start').reset_index().rename(columns={'index':'fk'})
+        for repeat, row in sorted_movie_df.iterrows():
+            assert row['end'] - row['start'] == row['frame_length']*len(row['data_file_index_tuple'])
+    
+            for data_file_index in row['data_file_index_tuple']:
+                start_time = row['start']+data_file_index*row['frame_length']
+                end_time = start_time + row['frame_length']
+                
+                new_df_dict['duration'].append(end_time - start_time)
+                new_df_dict['start_time'].append(start_time)
+                new_df_dict['end_time'].append(end_time)
+                new_df_dict['repeat'].append(repeat)
+                new_df_dict['data_file_index'].append(data_file_index)
+                new_df_dict['fk'].append(row['fk'])
+
+        natural_movie_df = pd.DataFrame(new_df_dict).set_index('fk')
+        expanded_df_list.append(natural_movie_df)
+        df = df[~df.index.isin(set.union(*[set(x.index) for x in expanded_df_list]))]
 
     # Expand randomized control:
-    new_df_dict = collections.defaultdict(list)
-    randomized_control_df = df[df['stimulus_key']=='ophys_pilot_randomized_control_A'].sort_values('start').reset_index().rename(columns={'index':'fk'})
-    for _, row in randomized_control_df.iterrows():
-        assert row['end'] - row['start'] == row['frame_length']*len(row['data_file_index_tuple'])
+    for randomized_control_stimulus_key in [x for x in df['stimulus_key'].unique() if 'ophys_pilot_randomized_control' in x]:
 
-        for data_file_index in row['data_file_index_tuple']:
-            start_time = row['start']+data_file_index*row['frame_length']
-            end_time = start_time + row['frame_length']
-            
-            new_df_dict['duration'].append(end_time - start_time)
-            new_df_dict['image_id'].append(pilot_randomized_control_full_sequence[data_file_index])
-            new_df_dict['start_time'].append(start_time)
-            new_df_dict['end_time'].append(end_time)
-            new_df_dict['data_file_index'].append(data_file_index)
-            new_df_dict['fk'].append(row['fk'])
+        new_df_dict = collections.defaultdict(list)
+        randomized_control_df = df[df['stimulus_key']==randomized_control_stimulus_key].sort_values('start').reset_index().rename(columns={'index':'fk'})
+        for _, row in randomized_control_df.iterrows():
+            assert row['end'] - row['start'] == row['frame_length']*len(row['data_file_index_tuple'])
+
+            for data_file_index in row['data_file_index_tuple']:
+                start_time = row['start']+data_file_index*row['frame_length']
+                end_time = start_time + row['frame_length']
+                
+                new_df_dict['duration'].append(end_time - start_time)
+                new_df_dict['image_id'].append(pilot_randomized_control_full_sequence[data_file_index])
+                new_df_dict['start_time'].append(start_time)
+                new_df_dict['end_time'].append(end_time)
+                new_df_dict['data_file_index'].append(data_file_index)
+                new_df_dict['fk'].append(row['fk'])
 
 
-    randomized_control = pd.DataFrame(new_df_dict).set_index('fk')
-    expanded_df_list.append(randomized_control)
-    df = df[~df.index.isin(set.union(*[set(x.index) for x in expanded_df_list]))]
+        randomized_control = pd.DataFrame(new_df_dict).set_index('fk')
+        expanded_df_list.append(randomized_control)
+        df = df[~df.index.isin(set.union(*[set(x.index) for x in expanded_df_list]))]
 
     # Expand tuples:
     new_df_dict = collections.defaultdict(list)
@@ -407,21 +402,79 @@ def get_stimtable_v1(session, data_path=opc.stimtable_path):
     df = df[~df.index.isin(set.union(*[set(x.index) for x in expanded_df_list]))]
     assert len(df) == 0
 
-    b = df_main.drop(['data_file_index_tuple','image_id_tuple', 'start', 'end'], axis=1)
+    b = df_main.drop(['data_file_index_tuple','image_id_tuple', 'start', 'end', 'frame_length'], axis=1)
     b.index.name = 'fk'
-
 
     expanded_df_list_join = [a.join(b) for a in expanded_df_list]
     
-    df_final = pd.concat(expanded_df_list_join).sort_values('start_time')
-    
+    df_final = pd.concat(expanded_df_list_join, sort=False).sort_values('start_time')
+    df_final['data_file_index'] = df_final['data_file_index'].astype(np.int)
+    df_final['session_type'] = session
     return df_final
-    
-    
 
+def running_group(running_keys, indices_to_group):
+    assert len(running_keys) == len(indices_to_group)
+
+    old=None
+    key_list = []
+    tmp = []
+    for key, other in zip(running_keys, indices_to_group):
+        if key == old:
+            tmp[-1].append(other)
+        else:
+            tmp.append([other])
+            key_list.append(key)
+        old = key
+
+    return key_list, tmp
+
+def get_interval_table(version=1, **kwargs):
+    
+    if version==1:
+        session = kwargs['session']
+        data_path = kwargs.get('data_path', opc.stimtable_path)
+        return get_interval_table_v1(session, data_path=data_path)
+    else:
+        raise RuntimeError
+
+
+def pickle_file_to_interval_table(pickle_file_name, version=1):
+
+    if 'StimB' in pickle_file_name:
+        stimtable_df = get_interval_table(version=version, session='B')
+    else:
+        raise
+
+    data = pickle.load(open(pickle_file_name, 'r'))
+    
+    df_list = []
+    for ii, stimuli in enumerate(data['stimuli']):
+
+        data_file_name = stimuli['movie_path'].replace('\\', '/')
+        curr_stimtable = stimtable_df[stimtable_df['data_file_name']==data_file_name].reset_index().rename(columns={'index':'lk'})
+        frame_inds = np.where(stimuli['frame_list'] != -1)
+        data_file_indices = stimuli['frame_list'][frame_inds]
+
+        data_dict = collections.defaultdict(list)
+        data_file_indices_flattened, running_frame_ind_list = running_group(data_file_indices, one(frame_inds))
+        for curr_file_indices, curr_running_frames in zip(data_file_indices_flattened, running_frame_ind_list):
+    
+            data_dict['frame_list'].append(curr_running_frames)
+        
+        run_grouped_df = pd.DataFrame(data_dict)
+
+        assert len(run_grouped_df) == len(curr_stimtable)
+        curr_file_df = curr_stimtable.join(run_grouped_df).set_index('lk')
+        df_list.append(curr_file_df)
+
+    df_final = pd.concat(df_list, sort=False).sort_values(['start_time', 'end_time']).drop(['start_time', 'end_time'], axis=1)
+
+    return df_final
 
 
 if __name__ == "__main__":
     
     # Debugging:
-    get_stimtable(session='A')
+
+    f = '/allen/programs/braintv/workgroups/nc-ophys/opc/opc_analysis/746271249_400524_180906_RSP_75_Slc17a7_2P1_20180906_400524_StimB/746004188_400524_20180906_stim.pkl'
+    df = pickle_file_to_interval_table(f)
