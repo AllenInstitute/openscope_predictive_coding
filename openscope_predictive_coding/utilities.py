@@ -407,7 +407,7 @@ def get_interval_table_v1(session, data_path=opc.stimtable_path):
 
     expanded_df_list_join = [a.join(b) for a in expanded_df_list]
     
-    df_final = pd.concat(expanded_df_list_join, sort=False).sort_values('start_time')
+    df_final = pd.concat(expanded_df_list_join).sort_values('start_time')
     df_final['data_file_index'] = df_final['data_file_index'].astype(np.int)
     df_final['session_type'] = session
     return df_final
@@ -467,7 +467,7 @@ def pickle_file_to_interval_table(pickle_file_name, version=1):
         curr_file_df = curr_stimtable.join(run_grouped_df).set_index('lk')
         df_list.append(curr_file_df)
 
-    df_final = pd.concat(df_list, sort=False).sort_values(['start_time', 'end_time']).drop(['start_time', 'end_time'], axis=1)
+    df_final = pd.concat(df_list).sort_values(['start_time', 'end_time']).drop(['start_time', 'end_time'], axis=1)
 
     df_final['start_frame'] = df_final['frame_list'].map(lambda x: x[0])
     df_final['end_frame_inclusive'] = df_final['frame_list'].map(lambda x: x[-1])
