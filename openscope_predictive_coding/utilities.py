@@ -469,6 +469,9 @@ def pickle_file_to_interval_table(pickle_file_name, version=1):
 
     df_final = pd.concat(df_list, sort=False).sort_values(['start_time', 'end_time']).drop(['start_time', 'end_time'], axis=1)
 
+    df_final['start_frame'] = df_final['frame_list'].map(lambda x: x[0])
+    df_final['end_frame_inclusive'] = df_final['frame_list'].map(lambda x: x[-1])
+
     return df_final
 
 
