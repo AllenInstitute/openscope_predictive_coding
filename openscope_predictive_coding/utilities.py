@@ -407,7 +407,7 @@ def get_interval_table_v1(session, data_path=opc.stimtable_path):
 
     expanded_df_list_join = [a.join(b) for a in expanded_df_list]
     
-    df_final = pd.concat(expanded_df_list_join, sort=False).sort_values('start_time')
+    df_final = pd.concat(expanded_df_list_join).sort_values('start_time')
     df_final['data_file_index'] = df_final['data_file_index'].astype(np.int)
     df_final['session_type'] = session
     return df_final
