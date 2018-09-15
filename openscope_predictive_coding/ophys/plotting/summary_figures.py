@@ -145,7 +145,7 @@ def get_xticks_xticklabels(trace, frame_rate, interval_sec=1):
     n_sec = n_frames / frame_rate
     xticks = np.arange(0, n_frames + 1, interval_frames)
     xticklabels = np.arange(0, n_sec + 0.1, interval_sec)
-    xticklabels = xticklabels - n_sec / 2
+    # xticklabels = xticklabels - n_sec / 2
     return xticks, xticklabels
 
 
@@ -169,15 +169,15 @@ def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color=
     if ax is None:
         fig, ax = plt.subplots()
     if len(traces) > 0:
-        trace = np.mean(traces)
+        trace = np.mean(traces, axis=0)
         times = np.arange(0, len(trace), 1)
-        sem = (traces.std()) / np.sqrt(float(len(traces)))
+        sem = (np.std(traces)) / np.sqrt(float(len(traces)))
         ax.plot(trace, label=legend_label, linewidth=3, color=color)
         ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
 
         xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec)
-        ax.set_xticks([int(x) for x in xticks])
-        ax.set_xticklabels([int(x) for x in xticklabels])
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(xticklabels)
         ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
         ax.set_xlabel('time (sec)')
         ax.set_ylabel(ylabel)
