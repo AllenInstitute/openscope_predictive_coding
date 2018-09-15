@@ -105,18 +105,11 @@ class OpenScopePredictiveCodingDataset(object):
         self._timestamps_ophys = self.timestamps['ophys_frames']['timestamps']
         return self._timestamps_ophys
     timestamps_ophys = LazyLoadable('_timestamps_ophys', get_timestamps_ophys)
-    #
-    # def get_stimulus_table(self):
-    #     self._stimulus_table = pd.read_hdf(
-    #         os.path.join(self.analysis_dir, 'stimulus_table.h5'),
-    #         key='df', format='fixed'
-    #     )
-    #     self._stimulus_table = self._stimulus_table.reset_index()
-    #     self._stimulus_table = self._stimulus_table.drop(
-    #         columns=['orientation', 'contrast', 'image_category', 'start_frame', 'end_frame', 'duration', 'index']
-    #     )
-    #     return self._stimulus_table
-    # stimulus_table = LazyLoadable('_stimulus_table', get_stimulus_table)
+
+    def get_stimulus_table(self):
+        self._stimulus_table = pd.read_hdf(os.path.join(self.analysis_dir, 'stimulus_table.h5'), key='df', format='fixed')
+        return self._stimulus_table
+    stimulus_table = LazyLoadable('_stimulus_table', get_stimulus_table)
 
     # def get_stimulus_template(self):
     #     with h5py.File(os.path.join(self.analysis_dir, 'stimulus_template.h5'), 'r') as stimulus_template_file:

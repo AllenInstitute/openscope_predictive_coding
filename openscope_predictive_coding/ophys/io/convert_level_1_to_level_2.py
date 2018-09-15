@@ -289,6 +289,8 @@ def get_stimulus_table(lims_data, timestamps_stimulus):
     stimulus_table.insert(loc=2, column='start_time', value=start_time)
     end_time = [timestamps_stimulus[end_frame] for end_frame in stimulus_table.end_frame_inclusive.values]
     stimulus_table.insert(loc=3, column='end_time', value=end_time)
+    sweeps = np.arange(0,len(stimulus_table),1)
+    stimulus_table.insert(loc=0, column='sweep', value=sweeps)
     return stimulus_table
 
 
