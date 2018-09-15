@@ -149,7 +149,7 @@ def get_xticks_xticklabels(trace, frame_rate, interval_sec=1):
     return xticks, xticklabels
 
 
-def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color='k', interval_sec=1, xlims=[-4, 4],
+def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color='k', interval_sec=0.5, xlims=[-1, 2],
                     ax=None):
     """
     Function that accepts an array of single trial traces and plots the mean and SEM of the trace, with xticklabels in seconds
@@ -185,9 +185,9 @@ def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color=
     return ax
 
 
-def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, alpha=0.15):
+def plot_flashes_on_trace(ax, analysis, duration=0.25, alpha=0.15):
     """
-    Function to create transparent gray bars spanning the duration of visual stimulus presentations to overlay on existing figure
+    Function to create transparent gray bar spanning the duration of visual stimulus presentations to overlay on existing figure
 
     :param ax: axis on which to plot stimulus presentation times
     :param analysis: ResponseAnalysis class instance
@@ -198,28 +198,9 @@ def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, alpha=0.
     :return: axis handle
     """
     frame_rate = analysis.ophys_frame_rate
-    stim_duration = analysis.stimulus_duration
-    blank_duration = analysis.blank_duration
-    change_frame = analysis.trial_window[1] * frame_rate
-    end_frame = (analysis.trial_window[1] + np.abs(analysis.trial_window[0])) * frame_rate
-    interval = blank_duration + stim_duration
-    if omitted:
-        array = np.arange((change_frame + interval) * frame_rate, end_frame, interval * frame_rate)
-    else:
-        array = np.arange(change_frame, end_frame, interval * frame_rate)
-    for i, vals in enumerate(array):
-        amin = array[i]
-        amax = array[i] + (stim_duration * frame_rate)
-        ax.axvspan(amin, amax, facecolor='gray', edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
-    if trial_type == 'go':
-        alpha = alpha * 3
-    else:
-        alpha
-    array = np.arange(change_frame - ((blank_duration) * frame_rate), 0, -interval * frame_rate)
-    for i, vals in enumerate(array):
-        amin = array[i]
-        amax = array[i] - (stim_duration * frame_rate)
-        ax.axvspan(amin, amax, facecolor='gray', edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+    start_frame = np.abs(analysis.sweep_window[0]) * frame_rate
+    end_frame = start_frame + (duration * frame_rate)
+    ax.axvspan(start_frame, end_frame, facecolor='gray', edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
     return ax
 
 
