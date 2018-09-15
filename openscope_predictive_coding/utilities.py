@@ -440,8 +440,12 @@ def get_interval_table(version=1, **kwargs):
 
 def pickle_file_to_interval_table(pickle_file_name, version=1):
 
-    if 'StimB' in pickle_file_name:
+    if 'StimA' in pickle_file_name:
+        stimtable_df = get_interval_table(version=version, session='A')
+    elif 'StimB' in pickle_file_name:
         stimtable_df = get_interval_table(version=version, session='B')
+    elif 'StimC' in pickle_file_name:
+        stimtable_df = get_interval_table(version=version, session='C')
     else:
         raise
 
