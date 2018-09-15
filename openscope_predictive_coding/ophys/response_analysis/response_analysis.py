@@ -79,7 +79,7 @@ class ResponseAnalysis(object):
         columns = ['sweep', 'cell_index', 'cell_specimen_id', 'trace', 'timestamps', 'mean_response', 'baseline_response',
                    'p_value', 'sd_over_baseline'] #, 'running_speed_trace', 'running_speed_timestamps', 'mean_running_speed']
         response_df = pd.DataFrame(df_list, columns=columns)
-        response_df = response_df.merge(stimulus_table, on='sweep')
+        response_df = response_df.merge(self.dataset.stimulus_table, on='sweep')
         return response_df
 
     def save_response_df(self, response_df):
