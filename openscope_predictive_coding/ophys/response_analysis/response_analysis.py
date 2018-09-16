@@ -38,7 +38,7 @@ class ResponseAnalysis(object):
         self.ophys_frame_rate = self.dataset.metadata['ophys_frame_rate'].values[0]
         self.stimulus_frame_rate = self.dataset.metadata['stimulus_frame_rate'].values[0]
 
-        self.get_response_df()
+        # self.get_response_df()
         self.get_block_df()
         self.get_oddball_block()
 

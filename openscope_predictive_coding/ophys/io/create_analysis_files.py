@@ -1,5 +1,6 @@
 from openscope_predictive_coding.ophys.dataset.openscope_predictive_coding_dataset import OpenScopePredictiveCodingDataset
 from openscope_predictive_coding.ophys.response_analysis.response_analysis import ResponseAnalysis
+import openscope_predictive_coding.ophys.plotting.summary_figures as sf
 
 import matplotlib
 import logging
@@ -12,7 +13,8 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     dataset = OpenScopePredictiveCodingDataset(experiment_id, cache_dir)
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files)
 
-
+    for cell_index in dataset.cell_indices:
+        sf.plot_cell_summary_figure(analysis, cell_index, save=True, show=True)
 
 
 if __name__ == '__main__':
