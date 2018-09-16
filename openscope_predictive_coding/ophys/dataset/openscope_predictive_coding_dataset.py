@@ -111,6 +111,12 @@ class OpenScopePredictiveCodingDataset(object):
         return self._stimulus_table
     stimulus_table = LazyLoadable('_stimulus_table', get_stimulus_table)
 
+    def get_stimulus_name(self):
+        stimulus_table = self.get_stimulus_table()
+        self._stimulus_name = stimulus_table.stimulus_key.values[0]
+        return self.stimulus_name
+    stimulus_name = LazyLoadable('_stimulus_name', get_stimulus_name)
+
     # def get_stimulus_template(self):
     #     with h5py.File(os.path.join(self.analysis_dir, 'stimulus_template.h5'), 'r') as stimulus_template_file:
     #         self._stimulus_template = np.asarray(stimulus_template_file['data'])
@@ -172,6 +178,18 @@ class OpenScopePredictiveCodingDataset(object):
         return self._max_projection
     max_projection = LazyLoadable('_max_projection', get_max_projection)
 
+    def get_red_channel_image(self):
+        import tifffile
+        red_image_file = [file for file in os.listdir(self.analysis_dir) if 'red' in file]
+        if len(red_image_file) > 0:
+            red_image_file_path = os.path.join(self.analysis_dir, red_image_file[0])
+            self._red_channel_image = tifffile.imread(red_image_file_path)
+        else:
+            print('no red channel image for', self.experiment_id)
+            self._red_channel_image = None
+        return self._red_channel_image
+    red_channel_image = LazyLoadable('_red_channel_image', get_red_channel_image)
+
     def get_motion_correction(self):
         self._motion_correction = pd.read_hdf(
             os.path.join(self.analysis_dir, 'motion_correction.h5'),
@@ -196,18 +214,6 @@ class OpenScopePredictiveCodingDataset(object):
     def get_cell_index_for_cell_specimen_id(self, cell_specimen_id):
         return np.where(self.cell_specimen_ids == cell_specimen_id)[0][0]
 
-    def get_red_channel_image(dataset):
-        import tifffile
-        red_image_file = [file for file in os.listdir(dataset.analysis_dir) if 'red' in file]
-        if len(red_image_file) > 0:
-            red_image_file_path = os.path.join(dataset.analysis_dir, red_image_file[0])
-            red_image = tifffile.imread(red_image_file_path)
-            dataset.red_channel_image = red_image
-        else:
-            print('no red channel image for', dataset.experiment_id)
-            red_image = None
-        return red_image
-
     @classmethod
     def construct_and_load(cls, experiment_id, cache_dir=None, **kwargs):
         ''' Instantiate a VisualBehaviorOphysDataset and load its data
@@ -229,6 +235,7 @@ class OpenScopePredictiveCodingDataset(object):
         obj.get_timestamps_ophys()
         obj.get_timestamps_stimulus()
         obj.get_stimulus_table()
+        obj.get_stimulus_name()
         # obj.get_stimulus_template()
         # obj.get_stimulus_metadata()
         # obj.get_running_speed()
@@ -239,6 +246,7 @@ class OpenScopePredictiveCodingDataset(object):
         obj.get_cell_specimen_ids()
         obj.get_cell_indices()
         obj.get_max_projection()
+        obj.get_red_channel_image()
         obj.get_motion_correction()
 
         return obj
