@@ -38,7 +38,9 @@ class ResponseAnalysis(object):
         self.ophys_frame_rate = self.dataset.metadata['ophys_frame_rate'].values[0]
         self.stimulus_frame_rate = self.dataset.metadata['stimulus_frame_rate'].values[0]
 
-        self.get_response_df()
+        # self.get_response_df()
+        self.get_block_df()
+        self.get_oddball_block()
 
     def get_response_df_path(self):
         path = os.path.join(self.dataset.analysis_dir, 'response_df.h5')
@@ -99,3 +101,46 @@ class ResponseAnalysis(object):
                 self.response_df = self.generate_response_df()
                 self.save_response_df(self.response_df)
         return self.response_df
+
+    def get_block_df(self):
+        gb = self.dataset.stimulus_table.groupby('session_block_name')
+        mins = gb.apply(lambda x: x['start_frame'].min())
+        maxs = gb.apply(lambda x: x['start_frame'].max())
+        block_df = pd.DataFrame()
+        block_df['block_name'] = mins.keys()
+        block_df['start_frame'] = mins.values
+        block_df['end_frame'] = maxs.values
+        block_df['start_time'] = [dataset.timestamps_stimulus[frame] for frame in block_df.start_frame.values]
+        block_df['end_time'] = [dataset.timestamps_stimulus[frame] for frame in block_df.end_frame.values]
+        self.block_df = block_df
+        return self.block_df
+
+    def create_oddball_block(self):
+        dataset = self.dataset
+        stimulus_table = dataset.stimulus_table.copy()
+        oddball_block = stimulus_table[stimulus_table.session_block_name == 'oddball']
+        sequence_images = list(oddball_block.image_id.values[:4])
+
+        # label oddball images
+        oddball_block['oddball'] = False
+        indices = oddball_block[oddball_block.image_id.isin(sequence_images) == False].index
+        for index in indices:
+            oddball_block.loc[index, 'oddball'] = True
+
+        # add boolean for sequence start
+        oddball_block['sequence_start'] = False
+        indices = oddball_block[oddball_block.image_id.isin([oddball_block.image_id.values[0]]) == True].index
+        for index in indices:
+            oddball_block.loc[index, 'sequence_start'] = True
+
+        # label all images of a sequence preceeding a violation frame as True
+        oddball_block['violation_sequence'] = False
+        indices = oddball_block[oddball_block.oddball == True].index
+        for index in indices:
+            oddball_block.loc[index, 'violation_sequence'] = True
+            oddball_block.loc[index - 1, 'violation_sequence'] = True
+            oddball_block.loc[index - 2, 'violation_sequence'] = True
+            oddball_block.loc[index - 3, 'violation_sequence'] = True
+
+        dataset.oddball_block = oddball_block
+        return oddball_block
