@@ -196,6 +196,18 @@ class OpenScopePredictiveCodingDataset(object):
     def get_cell_index_for_cell_specimen_id(self, cell_specimen_id):
         return np.where(self.cell_specimen_ids == cell_specimen_id)[0][0]
 
+    def get_red_channel_image(dataset):
+        import tifffile
+        red_image_file = [file for file in os.listdir(dataset.analysis_dir) if 'red' in file]
+        if len(red_image_file) > 0:
+            red_image_file_path = os.path.join(dataset.analysis_dir, red_image_file[0])
+            red_image = tifffile.imread(red_image_file_path)
+            dataset.red_channel_image = red_image
+        else:
+            print('no red channel image for', dataset.experiment_id)
+            red_image = None
+        return red_image
+
     @classmethod
     def construct_and_load(cls, experiment_id, cache_dir=None, **kwargs):
         ''' Instantiate a VisualBehaviorOphysDataset and load its data
@@ -216,7 +228,7 @@ class OpenScopePredictiveCodingDataset(object):
         obj.get_timestamps()
         obj.get_timestamps_ophys()
         obj.get_timestamps_stimulus()
-        # obj.get_stimulus_table()
+        obj.get_stimulus_table()
         # obj.get_stimulus_template()
         # obj.get_stimulus_metadata()
         # obj.get_running_speed()
