@@ -38,7 +38,7 @@ class ResponseAnalysis(object):
         self.ophys_frame_rate = self.dataset.metadata['ophys_frame_rate'].values[0]
         self.stimulus_frame_rate = self.dataset.metadata['stimulus_frame_rate'].values[0]
 
-        # self.get_response_df()
+        self.get_response_df()
         self.get_block_df()
         self.get_oddball_block()
 
@@ -51,9 +51,9 @@ class ResponseAnalysis(object):
         # running_speed = self.dataset.running_speed.running_speed.values
         df_list = []
         for cell_index in self.dataset.cell_indices:
-            for sweep in self.dataset.stimulus_table.sweep.values:  # ignore last trial to avoid truncated traces
-                cell_specimen_id = self.dataset.get_cell_specimen_id_for_cell_index(cell_index)
-                cell_trace = self.dataset.dff_traces[cell_index, :]
+            cell_specimen_id = self.dataset.get_cell_specimen_id_for_cell_index(cell_index)
+            cell_trace = self.dataset.dff_traces[cell_index, :]
+            for sweep in self.dataset.stimulus_table.sweep.values:
                 start_time = self.dataset.stimulus_table[self.dataset.stimulus_table.sweep == sweep].start_time.values[0]
 
                 trace, timestamps = ut.get_trace_around_timepoint(start_time, cell_trace,
@@ -81,7 +81,7 @@ class ResponseAnalysis(object):
         columns = ['sweep', 'cell_index', 'cell_specimen_id', 'trace', 'timestamps', 'mean_response', 'baseline_response',
                    'p_value', 'sd_over_baseline'] #, 'running_speed_trace', 'running_speed_timestamps', 'mean_running_speed']
         response_df = pd.DataFrame(df_list, columns=columns)
-        response_df = response_df.merge(self.dataset.stimulus_table, on='sweep')
+        # response_df = response_df.merge(self.dataset.stimulus_table, on='sweep')
         return response_df
 
     def save_response_df(self, response_df):
@@ -110,29 +110,26 @@ class ResponseAnalysis(object):
         block_df['block_name'] = mins.keys()
         block_df['start_frame'] = mins.values
         block_df['end_frame'] = maxs.values
-        block_df['start_time'] = [dataset.timestamps_stimulus[frame] for frame in block_df.start_frame.values]
-        block_df['end_time'] = [dataset.timestamps_stimulus[frame] for frame in block_df.end_frame.values]
+        block_df['start_time'] = [self.dataset.timestamps_stimulus[frame] for frame in block_df.start_frame.values]
+        block_df['end_time'] = [self.dataset.timestamps_stimulus[frame] for frame in block_df.end_frame.values]
+        block_df.to_hdf(os.path.join(self.dataset.analysis_dir, 'block_df.h5'), key='df', format='fixed')
         self.block_df = block_df
         return self.block_df
 
     def create_oddball_block(self):
-        dataset = self.dataset
-        stimulus_table = dataset.stimulus_table.copy()
+        stimulus_table = self.dataset.stimulus_table.copy()
         oddball_block = stimulus_table[stimulus_table.session_block_name == 'oddball']
         sequence_images = list(oddball_block.image_id.values[:4])
-
         # label oddball images
         oddball_block['oddball'] = False
         indices = oddball_block[oddball_block.image_id.isin(sequence_images) == False].index
         for index in indices:
             oddball_block.loc[index, 'oddball'] = True
-
         # add boolean for sequence start
         oddball_block['sequence_start'] = False
         indices = oddball_block[oddball_block.image_id.isin([oddball_block.image_id.values[0]]) == True].index
         for index in indices:
             oddball_block.loc[index, 'sequence_start'] = True
-
         # label all images of a sequence preceeding a violation frame as True
         oddball_block['violation_sequence'] = False
         indices = oddball_block[oddball_block.oddball == True].index
@@ -141,6 +138,16 @@ class ResponseAnalysis(object):
             oddball_block.loc[index - 1, 'violation_sequence'] = True
             oddball_block.loc[index - 2, 'violation_sequence'] = True
             oddball_block.loc[index - 3, 'violation_sequence'] = True
+        self.oddball_block = oddball_block
+        return self.oddball_block
 
-        dataset.oddball_block = oddball_block
-        return oddball_block
+    def get_oddball_block(self):
+        if (self.overwrite_analysis_files is True) or ('oddball_block.h5' not in os.path.join(self.dataset.analysis_dir)):
+            print('creating oddball block')
+            self.oddball_block = self.create_oddball_block()
+            print('saving oddball block')
+            self.oddball_block.to_hdf(os.path.join(self.dataset.analysis_dir, 'oddball_block.h5'), key='df', format='fixed')
+        elif (self.overwrite_analysis_files is False) and ('oddball_block.h5' in os.path.join(self.dataset.analysis_dir)):
+            print('loading oddball block')
+            self.oddball_block = pd.read_hdf(os.path.join(self.dataset.analysis_dir, 'oddball_block.h5'), key='df', format='fixed')
+        return self.oddball_block
