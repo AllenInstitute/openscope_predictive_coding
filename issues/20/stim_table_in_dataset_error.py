@@ -1,0 +1,3 @@
+import openscope_predictive_coding.utilities as utilities
+pkl_path = r"/allen/programs/braintv/workgroups/nc-ophys/opc/opc_analysis/746270939_400524_180905_RSP_75_Slc17a7_2P1_20180905_400524_StimA/745540122_400524_20180905_stim.pkl"
+data = utilities.pickle_file_to_interval_table(pkl_path)

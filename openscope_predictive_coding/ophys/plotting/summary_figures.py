@@ -9,6 +9,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import openscope_predictive_coding.ophys.response_analysis.utilities as ut
 
 # formatting
 sns.set_style('white')
@@ -27,6 +28,54 @@ def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
         fig.savefig(filename + f, transparent=True, orientation='landscape')
 
 
+
+def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hspace=None, sharex=False, sharey=False):
+    '''
+    Takes a figure with a gridspec defined and places an array of sub-axes on a portion of the gridspec
+
+    Takes as arguments:
+        fig: figure handle - required
+        dim: number of rows and columns in the subaxes - defaults to 1x1
+        xspan: fraction of figure that the subaxes subtends in the x-direction (0 = left edge, 1 = right edge)
+        yspan: fraction of figure that the subaxes subtends in the y-direction (0 = top edge, 1 = bottom edge)
+        wspace and hspace: white space between subaxes in vertical and horizontal directions, respectively
+
+    returns:
+        subaxes handles
+    '''
+    import matplotlib.gridspec as gridspec
+
+    outer_grid = gridspec.GridSpec(100, 100)
+    inner_grid = gridspec.GridSpecFromSubplotSpec(dim[0], dim[1],
+                                                  subplot_spec=outer_grid[int(100 * yspan[0]):int(100 * yspan[1]),
+                                                  int(100 * xspan[0]):int(100 * xspan[1])], wspace=wspace, hspace=hspace)
+
+    # NOTE: A cleaner way to do this is with list comprehension:
+    # inner_ax = [[0 for ii in range(dim[1])] for ii in range(dim[0])]
+    inner_ax = dim[0] * [dim[1] * [
+        fig]]  # filling the list with figure objects prevents an error when it they are later replaced by axis handles
+    inner_ax = np.array(inner_ax)
+    idx = 0
+    for row in range(dim[0]):
+        for col in range(dim[1]):
+            if row > 0 and sharex == True:
+                share_x_with = inner_ax[0][col]
+            else:
+                share_x_with = None
+
+            if col > 0 and sharey == True:
+                share_y_with = inner_ax[row][0]
+            else:
+                share_y_with = None
+
+            inner_ax[row][col] = plt.Subplot(fig, inner_grid[idx], sharex=share_x_with, sharey=share_y_with)
+            fig.add_subplot(inner_ax[row, col])
+            idx += 1
+
+    inner_ax = np.array(inner_ax).squeeze().tolist()  # remove redundant dimension
+    return inner_ax
+
+
 def plot_cell_zoom(roi_masks, max_projection, cell_id, spacex=10, spacey=10, show_mask=False, ax=None):
     m = roi_masks[cell_id]
     (y, x) = np.where(m == 1)
@@ -39,7 +88,7 @@ def plot_cell_zoom(roi_masks, max_projection, cell_id, spacex=10, spacey=10, sho
     mask[y, x] = 1
     if ax is None:
         fig, ax = plt.subplots()
-    ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.amax(max_projection))
+    ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.amax(max_projection)/2.)
     if show_mask:
         ax.imshow(mask, cmap='jet', alpha=0.3, vmin=0, vmax=1)
     ax.set_xlim(xmin - spacex, xmax + spacex)
@@ -130,64 +179,92 @@ def plot_roi_validation(lims_data):
     return roi_validation
 
 
+# def get_xticks_xticklabels(trace, frame_rate, interval_sec=1):
+#     """
+#     Function that accepts a timeseries, evaluates the number of points in the trace, and converts from acquisition frames to timestamps
+#
+#     :param trace: a single trace where length = the number of timepoints
+#     :param frame_rate: ophys frame rate if plotting a calcium trace, stimulus frame rate if plotting running speed
+#     :param interval_sec: interval in seconds in between labels
+#
+#     :return: xticks, xticklabels = xticks in frames corresponding to timepoints in the trace, xticklabels in seconds
+#     """
+#     interval_frames = interval_sec * frame_rate
+#     n_frames = len(trace)
+#     n_sec = n_frames / frame_rate
+#     xticks = np.arange(0, n_frames + 1, interval_frames)
+#     xticklabels = np.arange(0, n_sec + 0.1, interval_sec)
+#     # xticklabels = xticklabels - n_sec / 2
+#     return xticks, xticklabels
+
 def get_xticks_xticklabels(trace, frame_rate, interval_sec=1):
-    """
-    Function that accepts a timeseries, evaluates the number of points in the trace, and converts from acquisition frames to timestamps
-
-    :param trace: a single trace where length = the number of timepoints
-    :param frame_rate: ophys frame rate if plotting a calcium trace, stimulus frame rate if plotting running speed
-    :param interval_sec: interval in seconds in between labels
-
-    :return: xticks, xticklabels = xticks in frames corresponding to timepoints in the trace, xticklabels in seconds
-    """
     interval_frames = interval_sec * frame_rate
     n_frames = len(trace)
     n_sec = n_frames / frame_rate
     xticks = np.arange(0, n_frames + 1, interval_frames)
     xticklabels = np.arange(0, n_sec + 0.1, interval_sec)
-    xticklabels = xticklabels - n_sec / 2
+    # xticklabels = xticklabels - n_sec / 2
     return xticks, xticklabels
 
 
-def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color='k', interval_sec=1, xlims=[-4, 4],
-                    ax=None):
-    """
-    Function that accepts an array of single trial traces and plots the mean and SEM of the trace, with xticklabels in seconds
-
-    :param traces: array of individual trial traces to average and plot. traces must be of equal length
-    :param frame_rate: ophys frame rate if plotting a calcium trace, stimulus frame rate if plotting running speed
-    :param y_label: 'dF/F' for calcium trace, 'running speed (cm/s)' for running speed trace
-    :param legend_label: string describing trace for legend (ex: 'go', 'catch', image name or other condition identifier)
-    :param color: color to plot the trace
-    :param interval_sec: interval in seconds for x_axis labels
-    :param xlims: range in seconds to plot. Must be <= the length of the traces
-    :param ax: if None, create figure and axes to plot. If axis handle is provided, plot is created on that axis
-
-    :return: axis handle
-    """
-    xlims = [xlims[0] + np.abs(xlims[1]), xlims[1] + xlims[1]]
+def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color='k', interval_sec=0.5, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
     if len(traces) > 0:
-        trace = np.mean(traces)
+        trace = np.mean(traces, axis=0)
         times = np.arange(0, len(trace), 1)
-        sem = (traces.std()) / np.sqrt(float(len(traces)))
+        sem = (np.std(traces)) / np.sqrt(float(len(traces)))
+
         ax.plot(trace, label=legend_label, linewidth=3, color=color)
         ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
-
         xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec)
-        ax.set_xticks([int(x) for x in xticks])
-        ax.set_xticklabels([int(x) for x in xticklabels])
-        ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(xticklabels)
         ax.set_xlabel('time (sec)')
         ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
     return ax
 
 
-def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, alpha=0.15):
+# def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color='k', interval_sec=0.5, xlims=[-1, 2],
+#                     ax=None):
+#     """
+#     Function that accepts an array of single trial traces and plots the mean and SEM of the trace, with xticklabels in seconds
+#
+#     :param traces: array of individual trial traces to average and plot. traces must be of equal length
+#     :param frame_rate: ophys frame rate if plotting a calcium trace, stimulus frame rate if plotting running speed
+#     :param y_label: 'dF/F' for calcium trace, 'running speed (cm/s)' for running speed trace
+#     :param legend_label: string describing trace for legend (ex: 'go', 'catch', image name or other condition identifier)
+#     :param color: color to plot the trace
+#     :param interval_sec: interval in seconds for x_axis labels
+#     :param xlims: range in seconds to plot. Must be <= the length of the traces
+#     :param ax: if None, create figure and axes to plot. If axis handle is provided, plot is created on that axis
+#
+#     :return: axis handle
+#     """
+#     xlims = [xlims[0] + np.abs(xlims[1]), xlims[1] + xlims[1]]
+#     if ax is None:
+#         fig, ax = plt.subplots()
+#     if len(traces) > 0:
+#         trace = np.mean(traces, axis=0)
+#         times = np.arange(0, len(trace), 1)
+#         sem = (np.std(traces)) / np.sqrt(float(len(traces)))
+#         ax.plot(trace, label=legend_label, linewidth=3, color=color)
+#         ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
+#
+#         xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec)
+#         ax.set_xticks(xticks)
+#         ax.set_xticklabels(xticklabels)
+#         ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
+#         ax.set_xlabel('time (sec)')
+#         ax.set_ylabel(ylabel)
+#     sns.despine(ax=ax)
+#     return ax
+
+
+def plot_flashes_on_trace(ax, analysis, duration=0.25, alpha=0.15):
     """
-    Function to create transparent gray bars spanning the duration of visual stimulus presentations to overlay on existing figure
+    Function to create transparent gray bar spanning the duration of visual stimulus presentations to overlay on existing figure
 
     :param ax: axis on which to plot stimulus presentation times
     :param analysis: ResponseAnalysis class instance
@@ -198,28 +275,9 @@ def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, alpha=0.
     :return: axis handle
     """
     frame_rate = analysis.ophys_frame_rate
-    stim_duration = analysis.stimulus_duration
-    blank_duration = analysis.blank_duration
-    change_frame = analysis.trial_window[1] * frame_rate
-    end_frame = (analysis.trial_window[1] + np.abs(analysis.trial_window[0])) * frame_rate
-    interval = blank_duration + stim_duration
-    if omitted:
-        array = np.arange((change_frame + interval) * frame_rate, end_frame, interval * frame_rate)
-    else:
-        array = np.arange(change_frame, end_frame, interval * frame_rate)
-    for i, vals in enumerate(array):
-        amin = array[i]
-        amax = array[i] + (stim_duration * frame_rate)
-        ax.axvspan(amin, amax, facecolor='gray', edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
-    if trial_type == 'go':
-        alpha = alpha * 3
-    else:
-        alpha
-    array = np.arange(change_frame - ((blank_duration) * frame_rate), 0, -interval * frame_rate)
-    for i, vals in enumerate(array):
-        amin = array[i]
-        amax = array[i] - (stim_duration * frame_rate)
-        ax.axvspan(amin, amax, facecolor='gray', edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+    start_frame = np.abs(analysis.sweep_window[0]) * frame_rate
+    end_frame = start_frame + (duration * frame_rate)
+    ax.axvspan(start_frame, end_frame, facecolor='gray', edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
     return ax
 
 
@@ -292,15 +350,6 @@ def plot_image_response_for_trial_types(analysis, cell, save_dir=None):
         plt.gcf().subplots_adjust(right=0.85)
         save_figure(fig, figsize, save_dir, 'image_responses', analysis.dataset.analysis_folder+'_'+str(cell), formats=['.png'])
         plt.close()
-
-
-def get_colors_for_response_types(response_types):
-    c = sns.color_palette()
-    colors_dict = {'HIT': c[1], 'MISS': c[4], 'CR': c[0], 'FA': c[2]}
-    colors = []
-    for val in response_types:
-        colors.append(colors_dict[val])
-    return colors
 
 
 def plot_trial_trace_heatmap(trial_response_df, cell, cmap='viridis', vmax=0.5, colorbar=False, ax=None, save_dir=None):
@@ -409,6 +458,172 @@ def plot_mean_response_by_image_block(analysis, cell, save_dir=None, ax=None):
     return ax
 
 
+def plot_sequence_violation(analysis, cell_index, ax=None, save=False):
+    dataset = analysis.dataset
+    oddball_block = analysis.oddball_block.copy()
+    ophys_frame_rate = dataset.metadata.ophys_frame_rate.values[0]
+    if ax is None:
+        figsize = (8, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    start_times = oddball_block[
+        (oddball_block.violation_sequence == False) & (oddball_block.sequence_start == True)].start_time.values
+    cell_trace = analysis.dataset.dff_traces[cell_index]
+    traces = []
+    for start_time in start_times:
+        trace, timestamps = ut.get_trace_around_timepoint(start_time, cell_trace,
+                                                          dataset.timestamps_ophys,
+                                                          [0, 2], ophys_frame_rate)
+        traces.append(trace)
+
+    ax = plot_mean_trace(traces, ophys_frame_rate, color='b', interval_sec=0.5, ax=ax,
+                         legend_label='habituated sequence')
+
+    start_times = oddball_block[
+        (oddball_block.violation_sequence == True) & (oddball_block.sequence_start == True)].start_time.values
+    traces = []
+    for start_time in start_times:
+        trace, timestamps = ut.get_trace_around_timepoint(start_time, cell_trace,
+                                                          dataset.timestamps_ophys,
+                                                          [0, 2], ophys_frame_rate)
+        traces.append(trace)
+    ax = plot_mean_trace(traces, ophys_frame_rate, color='r', interval_sec=0.5, ax=ax,
+                         legend_label='violation sequence')
+    ax.axvspan(0.75 * ophys_frame_rate, 1 * ophys_frame_rate, facecolor='gray', edgecolor='none', alpha=0.3,
+               linewidth=0, zorder=1)
+    cell_specimen_id = dataset.get_cell_specimen_id_for_cell_index(cell_index)
+    ax.set_title('cell index: ' + str(cell_index) + ', cell_specimen_id: ' + str(cell_specimen_id))
+    # ax.legend(bbox_to_anchor=(1,1))
+    ax.legend(loc=9, bbox_to_anchor=(1, 1))
+
+    if save:
+        fig.tight_layout()
+        plt.gcf().subplots_adjust(right=0.75)
+        save_figure(fig, figsize, dataset.analysis_dir, 'sequence_responses', 'cell_' + str(cell_index))
+        plt.close()
+    return ax
+
+
+def plot_randomized_control_responses(dataset, cell_index, ax=None, save=False):
+    from scipy.stats import sem as compute_sem
+    stimulus_table = dataset.stimulus_table.copy()
+    ophys_frame_rate = dataset.metadata.ophys_frame_rate.values[0]
+    cell_trace = dataset.dff_traces[cell_index]
+
+    if ax is None:
+        figsize = (8,5)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    randomized_control_pre_block = stimulus_table[stimulus_table.session_block_name=='randomized_control_pre']
+    mean = []
+    sem = []
+    images = np.sort(randomized_control_pre_block.image_id.unique())
+    for image_id in images:
+        means = []
+        start_times = randomized_control_pre_block[(randomized_control_pre_block.image_id==image_id)].start_time.values
+        for start_time in start_times:
+            trace, timestamps = ut.get_trace_around_timepoint(start_time, cell_trace,dataset.timestamps_ophys,[0,0.5], ophys_frame_rate)
+            mean_val = np.mean(trace)
+            means.append(mean_val)
+        mean.append(np.mean(means))
+        sem.append(compute_sem(means))
+
+    ax.errorbar(np.arange(0,len(images)),mean,yerr=sem,fmt='o',color='g',label='pre')
+
+    randomized_control_post_block = stimulus_table[stimulus_table.session_block_name=='randomized_control_post']
+    mean = []
+    sem = []
+    images = np.sort(randomized_control_post_block.image_id.unique())
+    for image_id in images:
+        means = []
+        start_times = randomized_control_post_block[(randomized_control_post_block.image_id==image_id)].start_time.values
+        for start_time in start_times:
+            trace, timestamps = ut.get_trace_around_timepoint(start_time, cell_trace,dataset.timestamps_ophys,[0,0.5], ophys_frame_rate)
+            mean_val = np.mean(trace)
+            means.append(mean_val)
+        mean.append(np.mean(means))
+        sem.append(compute_sem(means))
+
+    ax.errorbar(np.arange(0,len(images)),mean,yerr=sem,fmt='o',color='m',label='post')
+    ax.set_ylabel('mean dF/F')
+    ax.set_xlabel('image_id')
+    ax.set_xticks(np.arange(0,len(images)))
+    ax.set_xticklabels([int(image) for image in images]);
+    ax.set_title('cell '+str(cell_index)+' - randomized control block')
+    ax.legend(bbox_to_anchor=(1.3,1))
+
+    if save:
+        save_figure(fig,figsize,dataset.analysis_dir,'randomized_control','cell_'+str(cell_index))
+        plt.close()
+    return ax
+
+def plot_trace_with_stimulus_blocks(analysis, cell_index, ax=None, save=False):
+    dataset = analysis.dataset
+    block_df = analysis.block_df
+    cell_specimen_id = dataset.get_cell_specimen_id_for_cell_index(cell_index)
+
+    colors = sns.color_palette('deep')
+    if ax is None:
+        figsize=(20,5)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    ax.plot(dataset.timestamps_ophys, dataset.dff_traces[cell_index])
+    ax.set_xlabel('time (seconds)')
+    ax.set_ylabel('dF/F')
+    ax.set_title(str(cell_specimen_id)+'_'+str(cell_index)+'_'+dataset.analysis_folder)
+
+    for i, block_name in enumerate(block_df.block_name.values):
+        start_time = block_df[block_df.block_name==block_name].start_time.values[0]
+        end_time = block_df[block_df.block_name==block_name].end_time.values[0]
+        ax.axvspan(start_time, end_time, facecolor=colors[i], edgecolor='none', alpha=0.3, linewidth=0, zorder=1, label=block_name)
+    ax.legend(bbox_to_anchor=(1,1))
+
+    if save:
+        fig.tight_layout()
+        plt.gcf().subplots_adjust(right=0.8)
+        save_figure(fig, figsize, dataset.analysis_dir, 'cell_traces', 'cell_'+str(cell_index))
+    return ax
+
+
+def plot_cell_summary_figure(analysis, cell_index, save=False, show=True):
+    dataset = analysis.dataset
+    cell_specimen_id = dataset.get_cell_specimen_id_for_cell_index(cell_index)
+    sns.set_context('talk', rc={'lines.markeredgewidth': 2})
+    figsize = [2 * 11, 2 * 8.5]
+    fig = plt.figure(figsize=figsize, facecolor='white')
+
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .14), yspan=(0, .22))
+    ax = plot_cell_zoom(dataset.roi_mask_array, dataset.max_projection, cell_index, spacex=20, spacey=20,
+                           show_mask=True, ax=ax)
+    ax.set_title('')
+
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.12, .26), yspan=(0, .22))
+    ax = plot_cell_zoom(dataset.roi_mask_array, dataset.red_channel_image, cell_index, spacex=20, spacey=20,
+                           show_mask=False, ax=ax)
+    ax.set_title('')
+
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.25, .85), yspan=(0, .22))
+    ax = plot_trace_with_stimulus_blocks(analysis, cell_index, ax=ax, save=False)
+
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .25), yspan=(.22, .42))
+    ax = plot_sequence_violation(analysis, cell_index, save=False, ax=ax)
+    ax.set_title('')
+
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.32, .6), yspan=(.22, .42))
+    ax = plot_randomized_control_responses(dataset, cell_index, ax=ax, save=False)
+    ax.set_title('randomized control blocks')
+
+    # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.83, 1), yspan=(.78, 1))
+    # table_data = format_table_data(dataset)
+    # xtable = ax.table(cellText=table_data.values, cellLoc='left', rowLoc='left', loc='center', fontsize=12)
+    # xtable.scale(1, 3)
+    # ax.axis('off');
+
+    fig.tight_layout()
+    if save:
+        save_figure(fig, figsize, dataset.analysis_dir, 'cell_summary_plots', 'cell_' + str(cell_index))
+        if not show:
+            plt.close()
 
 if __name__ == '__main__':
     experiment_id = 719996589

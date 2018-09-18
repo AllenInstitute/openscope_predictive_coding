@@ -218,33 +218,90 @@ def get_pkl(lims_data):
     pkl = pd.read_pickle(stimulus_pkl_path)
     return pkl
 
-
-# def get_core_data(pkl, timestamps_stimulus):
-#     try:
-#         core_data = foraging.data_to_change_detection_core(pkl, time=timestamps_stimulus)
-#     except KeyError:
-#         core_data = foraging2.data_to_change_detection_core(pkl, time=timestamps_stimulus)
-#     return core_data
-
 #
-# def get_task_parameters(core_data):
-#     task_parameters = {}
-#     task_parameters['blank_duration'] = core_data['metadata']['blank_duration_range'][0]
-#     task_parameters['stimulus_duration'] = core_data['metadata']['stim_duration']
-#     if 'omitted_flash_fraction' in core_data['metadata']['params'].keys():
-#         task_parameters['omitted_flash_fraction'] = core_data['metadata']['params']['omitted_flash_fraction']
-#     else:
-#         task_parameters['omitted_flash_fraction'] = None
-#     task_parameters['response_window'] = [core_data['metadata']['response_window']]
-#     task_parameters['reward_volume'] = core_data['metadata']['rewardvol']
-#     task_parameters['stage'] = core_data['metadata']['stage']
-#     task_parameters['stimulus'] = core_data['metadata']['stimulus']
-#     task_parameters['stimulus_distribution'] = core_data['metadata']['stimulus_distribution']
-#     task_parameters['task'] = core_data['metadata']['task']
-#     task_parameters['n_stimulus_frames'] = core_data['metadata']['n_stimulus_frames']
-#     task_parameters = pd.DataFrame(task_parameters, columns=task_parameters.keys(), index=['params'])
-#     return task_parameters
+# def calc_deriv(x, time):
+#     dx = np.diff(x)
+#     dt = np.diff(time)
+#     dxdt_rt = np.hstack((np.nan, dx / dt))
+#     dxdt_lt = np.hstack((dx / dt, np.nan))
 #
+#     dxdt = np.vstack((dxdt_rt, dxdt_lt))
+#
+#     dxdt = np.nanmean(dxdt, axis=0)
+#
+#     return dxdt
+#
+#
+# def rad_to_dist(speed_rad_per_s):
+#     wheel_diameter = 6.5 * 2.54  # 6.5" wheel diameter
+#     running_radius = 0.5 * (
+#         2.0 * wheel_diameter / 3.0)  # assume the animal runs at 2/3 the distance from the wheel center
+#     running_speed_cm_per_sec = np.pi * speed_rad_per_s * running_radius / 180.
+#     return running_speed_cm_per_sec
+#
+#
+# def load_running_speed(pkl, smooth=False, time=None):
+#     if time is None:
+#         print('`time` not passed. using vsync from pkl file')
+#         time = load_time(data)
+#
+#     dx_raw = np.array(data['dx'])
+#     dx = medfilt(dx_raw, kernel_size=5)  # remove big, single frame spikes in encoder values
+#     dx = np.cumsum(dx)  # wheel rotations
+#
+#     time = time[:len(dx)]
+#
+#     speed = calc_deriv(dx, time)
+#     speed = rad_to_dist(speed)
+#
+#     if smooth:
+#         # running_speed_cm_per_sec = pd.rolling_mean(running_speed_cm_per_sec, window=6)
+#         raise NotImplementedError
+#
+#     # accel = calc_deriv(speed, time)
+#     # jerk = calc_deriv(accel, time)
+#
+#     running_speed = pd.DataFrame({
+#         'time': time,
+#         'frame': range(len(time)),
+#         'speed': speed,
+#         'dx': dx_raw,
+#         'v_sig': data['vsig'],
+#         'v_in': data['vin'],
+#         # 'acceleration (cm/s^2)': accel,
+#         # 'jerk (cm/s^3)': jerk,
+#     })
+#     return running_speed
+
+def get_stimulus_table(lims_data, timestamps_stimulus):
+    import openscope_predictive_coding.utilities as utilities
+    # get pkl file from analysis_dir because opc function requires 'stimB' to be in file name
+    stimulus_pkl_path = get_stimulus_pkl_path(lims_data)
+    pkl_file = os.path.basename(stimulus_pkl_path)
+    analysis_dir = get_analysis_dir(lims_data)
+    pkl_path = os.path.join(analysis_dir, pkl_file)
+
+    data = utilities.pickle_file_to_interval_table(pkl_path)
+    stimulus_table = data[
+        ['start_frame', 'end_frame_inclusive', 'session_block_name', 'image_id', 'repeat', 'fraction_occlusion',
+         'duration', 'session_type', 'stimulus_key', 'data_file_index', 'data_file_name', 'frame_list']]
+    start_time = [timestamps_stimulus[start_frame] for start_frame in stimulus_table.start_frame.values]
+    stimulus_table.insert(loc=2, column='start_time', value=start_time)
+    end_time = [timestamps_stimulus[end_frame] for end_frame in stimulus_table.end_frame_inclusive.values]
+    stimulus_table.insert(loc=3, column='end_time', value=end_time)
+    sweeps = np.arange(0,len(stimulus_table),1)
+    stimulus_table.insert(loc=0, column='sweep', value=sweeps)
+
+    stimulus_table = stimulus_table.reset_index()
+    stimulus_table = stimulus_table.drop(columns=['lk'])
+
+    return stimulus_table
+
+
+def save_stimulus_table(stimulus_table, lims_data):
+    save_dataframe_as_h5(stimulus_table, 'stimulus_table', get_analysis_dir(lims_data))
+
+
 #
 # def save_core_data_components(core_data, lims_data, timestamps_stimulus):
 #     rewards = core_data['rewards']
@@ -273,19 +330,6 @@ def get_pkl(lims_data):
 #
 #     task_parameters = get_task_parameters(core_data)
 #     save_dataframe_as_h5(task_parameters, 'task_parameters', get_analysis_dir(lims_data))
-#
-#
-# def get_trials(core_data):
-#     trials = create_extended_dataframe(
-#         trials=core_data['trials'],
-#         metadata=core_data['metadata'],
-#         licks=core_data['licks'],
-#         time=core_data['time'])
-#     return trials
-
-#
-# def save_trials(trials, lims_data):
-#     save_dataframe_as_h5(trials, 'trials', get_analysis_dir(lims_data))
 #
 #
 # def get_visual_stimulus_data(pkl):
@@ -525,6 +569,9 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
 
     pkl = get_pkl(lims_data)
     timestamps_stimulus = get_timestamps_stimulus(timestamps)
+
+    stimulus_table = get_stimulus_table(lims_data, timestamps_stimulus)
+    save_stimulus_table(stimulus_table, lims_data)
     # core_data = get_core_data(pkl, timestamps_stimulus)
     # save_core_data_components(core_data, lims_data, timestamps_stimulus)
     #
@@ -585,7 +632,15 @@ if __name__ == '__main__':
 
     # import pandas as pd
     #
-    experiment_id = 746271249
+    experiment_ids = [746270939, 746271249,
+                      750534428, 752473496,
+                      746271665, 750845430,
+                      750846019, 752473630,
+                      ]
+    # experiment_id = 746271249
+    experiment_id = 752473630
+
+
     cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis'
     convert_level_1_to_level_2(experiment_id, cache_dir=cache_dir)
     # df = pd.read_csv(manifest)

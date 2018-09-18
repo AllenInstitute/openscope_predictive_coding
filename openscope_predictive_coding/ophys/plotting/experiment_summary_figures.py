@@ -76,42 +76,6 @@ def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
     for f in formats:
         fig.savefig(filename + f, transparent=True, orientation='landscape')
 
-
-def plot_lick_raster(trials, ax=None, save_dir=None):
-    if ax is None:
-        figsize = (5, 10)
-        fig, ax = plt.subplots(figsize=figsize)
-    for trial in trials.trial.values:
-        trial_data = trials.iloc[trial]
-        # get times relative to change time
-        trial_start = trial_data.start_time - trial_data.change_time
-        lick_times = [(t - trial_data.change_time) for t in trial_data.lick_times]
-        reward_time = [(t - trial_data.change_time) for t in trial_data.reward_times]
-        # plot trials as colored rows
-        ax.axhspan(trial, trial + 1, -200, 200, color=trial_data.trial_type_color, alpha=.5)
-        # plot reward times
-        if len(reward_time) > 0:
-            ax.plot(reward_time[0], trial + 0.5, '.', color='b', label='reward', markersize=6)
-        ax.vlines(trial_start, trial, trial + 1, color='black', linewidth=1)
-        # plot lick times
-        ax.vlines(lick_times, trial, trial + 1, color='k', linewidth=1)
-        # annotate change time
-        ax.vlines(0, trial, trial + 1, color=[.5, .5, .5], linewidth=1)
-    # gray bar for response window
-    ax.axvspan(trial_data.response_window[0], trial_data.response_window[1], facecolor='gray', alpha=.4,
-               edgecolor='none')
-    ax.grid(False)
-    ax.set_ylim(0, len(trials))
-    ax.set_xlim([-1, 4])
-    ax.set_ylabel('trials')
-    ax.set_xlabel('time (sec)')
-    ax.set_title('lick raster')
-    plt.gca().invert_yaxis()
-
-    if save_dir:
-        save_figure(fig, figsize, save_dir, 'behavior', 'lick_raster')
-
-
 def plot_traces_heatmap(dff_traces, ax=None, save_dir=None):
     if ax is None:
         figsize = (20, 8)
@@ -220,39 +184,6 @@ def plot_run_speed(running_speed, timestamps_stimulus, ax=None, label=False):
     if label:
         ax.set_ylabel('run speed (cm/s)')
         ax.set_xlabel('time(s)')
-    return ax
-
-
-def plot_d_prime(trials, d_prime, ax=None):
-    colors = sns.color_palette()
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 2))
-    ax.plot(trials.change_time.values, d_prime, color=colors[4], linewidth=4, label='d_prime')
-    ax.set_ylabel('d prime')
-    return ax
-
-
-def plot_hit_false_alarm_rates(trials, ax=None):
-    from visual_behavior import utilities as vbut
-    trials['auto_rewarded'] = False
-    hr, cr, d_prime = vbut.get_response_rates(trials, sliding_window=100, reward_window=None)
-
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 2))
-    ax.plot(trials.change_time.values, hr, color='#55a868', linewidth=4, label='hit_rate')
-    ax.plot(trials.change_time.values, cr, color='#c44e52', linewidth=4, label='fa_rate')
-    ax.set_ylabel('response rate')
-    ax.set_ylim(-0.2, 1.2)
-    ax.legend(loc='upper right')
-    return ax
-
-
-def plot_reward_rate(trials, ax=None):
-    colors = sns.color_palette()
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 2))
-    ax.plot(trials.change_time.values, trials.reward_rate.values, color=colors[0], linewidth=4, label='reward_rate')
-    ax.set_ylabel('reward rate')
     return ax
 
 
