@@ -449,18 +449,27 @@ def pickle_file_to_interval_table(pickle_file_name, version=1):
     else:
         raise
 
+
     data = pickle.load(open(pickle_file_name, 'r'))
     
-    df_list = []
-    for ii, stimuli in enumerate(data['stimuli']):
 
+    data_file_name_to_frame_inds_dict = collections.defaultdict(list)
+    data_file_name_to_data_file_indices = collections.defaultdict(list)
+    for ii, stimuli in enumerate(data['stimuli']):
         data_file_name = stimuli['movie_path'].replace('\\', '/')
-        curr_stimtable = stimtable_df[stimtable_df['data_file_name']==data_file_name].reset_index().rename(columns={'index':'lk'})
-        frame_inds = np.where(stimuli['frame_list'] != -1)
-        data_file_indices = stimuli['frame_list'][frame_inds]
+        curr_frame_inds = np.where(stimuli['frame_list'] != -1)
+        data_file_name_to_frame_inds_dict[data_file_name].extend(one(curr_frame_inds))
+        data_file_name_to_data_file_indices[data_file_name].extend(stimuli['frame_list'][curr_frame_inds])
+
+    df_list = []
+    for data_file_name in data_file_name_to_frame_inds_dict:
+
+        curr_stimtable = stimtable_df[stimtable_df['data_file_name']==data_file_name].reset_index()
+        frame_inds = data_file_name_to_frame_inds_dict[data_file_name]
+        data_file_indices = data_file_name_to_data_file_indices[data_file_name]
 
         data_dict = collections.defaultdict(list)
-        data_file_indices_flattened, running_frame_ind_list = running_group(data_file_indices, one(frame_inds))
+        data_file_indices_flattened, running_frame_ind_list = running_group(data_file_indices, frame_inds)
         for curr_file_indices, curr_running_frames in zip(data_file_indices_flattened, running_frame_ind_list):
     
             data_dict['frame_list'].append(curr_running_frames)
@@ -468,14 +477,13 @@ def pickle_file_to_interval_table(pickle_file_name, version=1):
         run_grouped_df = pd.DataFrame(data_dict)
 
         assert len(run_grouped_df) == len(curr_stimtable)
-        curr_file_df = curr_stimtable.join(run_grouped_df).set_index('lk')
+        curr_file_df = curr_stimtable.join(run_grouped_df)
         df_list.append(curr_file_df)
 
     df_final = pd.concat(df_list).sort_values(['start_time', 'end_time']).drop(['start_time', 'end_time'], axis=1)
 
     df_final['start_frame'] = df_final['frame_list'].map(lambda x: x[0])
     df_final['end_frame_inclusive'] = df_final['frame_list'].map(lambda x: x[-1])
-
     return df_final
 
 
