@@ -3,7 +3,7 @@ Created on Sunday July 15 2018
 
 @author: marinag
 """
-
+from __future__ import print_function
 import os
 import numpy as np
 import pandas as pd
@@ -42,65 +42,6 @@ class ResponseAnalysis(object):
         self.get_block_df()
         self.get_oddball_block()
 
-    def get_response_df_path(self):
-        path = os.path.join(self.dataset.analysis_dir, 'response_df.h5')
-        return path
-
-    def generate_response_df(self):
-        print('generating response dataframe')
-        # running_speed = self.dataset.running_speed.running_speed.values
-        df_list = []
-        for cell_index in self.dataset.cell_indices:
-            cell_specimen_id = self.dataset.get_cell_specimen_id_for_cell_index(cell_index)
-            cell_trace = self.dataset.dff_traces[cell_index, :]
-            for sweep in self.dataset.stimulus_table.sweep.values:
-                start_time = self.dataset.stimulus_table[self.dataset.stimulus_table.sweep == sweep].start_time.values[0]
-
-                trace, timestamps = ut.get_trace_around_timepoint(start_time, cell_trace,
-                                                                  self.dataset.timestamps_ophys,
-                                                                  self.sweep_window, self.ophys_frame_rate)
-                mean_response = ut.get_mean_in_window(trace, self.response_window, self.ophys_frame_rate)
-                baseline_response = ut.get_mean_in_window(trace, self.baseline_window, self.ophys_frame_rate)
-                p_value = ut.get_p_val(trace, self.response_window, self.ophys_frame_rate)
-                sd_over_baseline = ut.get_sd_over_baseline(trace, self.response_window, self.baseline_window,
-                                                           self.ophys_frame_rate)
-
-                # # this is redundant because its the same for every cell. do we want to keep this?
-                # running_speed_trace, running_speed_timestamps = ut.get_trace_around_timepoint(change_time,
-                #                                                                               running_speed,
-                #                                                                               self.dataset.timestamps_stimulus,
-                #                                                                               self.sweep_window,
-                #                                                                               self.stimulus_frame_rate)
-                # mean_running_speed = ut.get_mean_in_window(running_speed_trace, self.response_window,
-                #                                            self.stimulus_frame_rate)
-
-                df_list.append(
-                    [sweep, cell_index, cell_specimen_id, trace, timestamps, mean_response, baseline_response,
-                     p_value, sd_over_baseline]) #, running_speed_trace, running_speed_timestamps, mean_running_speed])
-
-        columns = ['sweep', 'cell_index', 'cell_specimen_id', 'trace', 'timestamps', 'mean_response', 'baseline_response',
-                   'p_value', 'sd_over_baseline'] #, 'running_speed_trace', 'running_speed_timestamps', 'mean_running_speed']
-        response_df = pd.DataFrame(df_list, columns=columns)
-        # response_df = response_df.merge(self.dataset.stimulus_table, on='sweep')
-        return response_df
-
-    def save_response_df(self, response_df):
-        print('saving response dataframe')
-        response_df.to_hdf(self.get_response_df_path(), key='df', format='fixed')
-
-    def get_response_df(self):
-        if self.overwrite_analysis_files:
-            print('overwriting analysis files')
-            self.response_df = self.generate_response_df()
-            self.save_response_df(self.response_df)
-        else:
-            if os.path.exists(self.get_response_df_path()):
-                print('loading response dataframe')
-                self.response_df = pd.read_hdf(self.get_response_df_path(), key='df', format='fixed')
-            else:
-                self.response_df = self.generate_response_df()
-                self.save_response_df(self.response_df)
-        return self.response_df
 
     def get_block_df(self):
         gb = self.dataset.stimulus_table.groupby('session_block_name')
@@ -116,38 +57,136 @@ class ResponseAnalysis(object):
         self.block_df = block_df
         return self.block_df
 
-    def create_oddball_block(self):
+    def get_sequence_images(self):
         stimulus_table = self.dataset.stimulus_table.copy()
         oddball_block = stimulus_table[stimulus_table.session_block_name == 'oddball']
         sequence_images = list(oddball_block.image_id.values[:4])
+        return sequence_images
+
+    def create_stimulus_block(self, session_block_name):
+        stimulus_table = self.dataset.stimulus_table.copy()
+        block = stimulus_table[stimulus_table.session_block_name == session_block_name]
+        sequence_images = self.get_sequence_images()
+        # label oddball images
+        block['oddball'] = False
+        indices = block[block.image_id.isin(sequence_images) == False].index
+        block.loc[indices, 'oddball'] = True
+        if session_block_name == 'oddball':
+            # add boolean for sequence start
+            block['sequence_start'] = False
+            indices = block[block.image_id.isin([block.image_id.values[0]]) == True].index
+            block.loc[indices, 'sequence_start'] = True
+            # label all images of a sequence preceeding a violation frame as True
+            block['violation_sequence'] = False
+            indices = block[block.oddball == True].index
+            block.loc[indices, 'violation_sequence'] = True
+            block.loc[indices - 1, 'violation_sequence'] = True
+            block.loc[indices - 2, 'violation_sequence'] = True
+            block.loc[indices - 3, 'violation_sequence'] = True
+        print('saving', session_block_name, 'block')
+        block.to_hdf(os.path.join(self.dataset.analysis_dir, session_block_name + '_block.h5'), key='df', format='fixed')
+        return block
+
+    def get_stimulus_block(self, session_block_name):
+        if (self.overwrite_analysis_files is True) or (
+                session_block_name + '_block.h5' not in os.listdir(os.path.join(self.dataset.analysis_dir))):
+            print('creating ' + session_block_name + ' block')
+            block = self.create_stimulus_block(session_block_name)
+        elif (self.overwrite_analysis_files is False) and (
+                session_block_name + '_block.h5' in os.listdir(os.path.join(self.dataset.analysis_dir))):
+            print('loading ' + session_block_name + ' block')
+            block = pd.read_hdf(os.path.join(self.dataset.analysis_dir, session_block_name + '_block.h5'), key='df',
+                                format='fixed')
+        return block
+
+    def create_oddball_block(self):
+        stimulus_table = self.dataset.stimulus_table.copy()
+        oddball_block = stimulus_table[stimulus_table.session_block_name == 'oddball']
+        sequence_images = self.get_sequence_images()
         # label oddball images
         oddball_block['oddball'] = False
         indices = oddball_block[oddball_block.image_id.isin(sequence_images) == False].index
-        for index in indices:
-            oddball_block.loc[index, 'oddball'] = True
+        oddball_block.loc[indices, 'oddball'] = True
         # add boolean for sequence start
         oddball_block['sequence_start'] = False
         indices = oddball_block[oddball_block.image_id.isin([oddball_block.image_id.values[0]]) == True].index
-        for index in indices:
-            oddball_block.loc[index, 'sequence_start'] = True
+        oddball_block.loc[indices, 'sequence_start'] = True
         # label all images of a sequence preceeding a violation frame as True
         oddball_block['violation_sequence'] = False
         indices = oddball_block[oddball_block.oddball == True].index
-        for index in indices:
-            oddball_block.loc[index, 'violation_sequence'] = True
-            oddball_block.loc[index - 1, 'violation_sequence'] = True
-            oddball_block.loc[index - 2, 'violation_sequence'] = True
-            oddball_block.loc[index - 3, 'violation_sequence'] = True
+        oddball_block.loc[indices, 'violation_sequence'] = True
+        oddball_block.loc[indices - 1, 'violation_sequence'] = True
+        oddball_block.loc[indices - 2, 'violation_sequence'] = True
+        oddball_block.loc[indices - 3, 'violation_sequence'] = True
+        print('saving oddball block')
+        oddball_block.to_hdf(os.path.join(self.dataset.analysis_dir, 'oddball_block.h5'), key='df', format='fixed')
         self.oddball_block = oddball_block
         return self.oddball_block
 
     def get_oddball_block(self):
-        if (self.overwrite_analysis_files is True) or ('oddball_block.h5' not in os.path.join(self.dataset.analysis_dir)):
+        if (self.overwrite_analysis_files is True) or (
+            'oddball_block.h5' not in os.listdir(os.path.join(self.dataset.analysis_dir))):
             print('creating oddball block')
             self.oddball_block = self.create_oddball_block()
-            print('saving oddball block')
-            self.oddball_block.to_hdf(os.path.join(self.dataset.analysis_dir, 'oddball_block.h5'), key='df', format='fixed')
-        elif (self.overwrite_analysis_files is False) and ('oddball_block.h5' in os.path.join(self.dataset.analysis_dir)):
+        elif (self.overwrite_analysis_files is False) and (
+            'oddball_block.h5' in os.listdir(os.path.join(self.dataset.analysis_dir))):
             print('loading oddball block')
-            self.oddball_block = pd.read_hdf(os.path.join(self.dataset.analysis_dir, 'oddball_block.h5'), key='df', format='fixed')
+            self.oddball_block = pd.read_hdf(os.path.join(self.dataset.analysis_dir, 'oddball_block.h5'), key='df',
+                                             format='fixed')
         return self.oddball_block
+
+    def generate_response_df(self, session_block_name):
+        print('generating response dataframe for', session_block_name)
+        stimulus_block = self.get_stimulus_block(session_block_name)
+        df_list = []
+        for cell_index in self.dataset.cell_indices:
+            cell_specimen_id = self.dataset.get_cell_specimen_id_for_cell_index(cell_index)
+            cell_trace = self.dataset.dff_traces[cell_index, :]
+            for sweep in stimulus_block.sweep.values:
+                start_time = stimulus_block[stimulus_block.sweep == sweep].start_time.values[0]
+
+                trace, timestamps = ut.get_trace_around_timepoint(start_time, cell_trace,
+                                                                  self.dataset.timestamps_ophys,
+                                                                  self.sweep_window, self.ophys_frame_rate)
+                mean_response = ut.get_mean_in_window(trace, self.response_window, self.ophys_frame_rate)
+                baseline_response = ut.get_mean_in_window(trace, self.baseline_window, self.ophys_frame_rate)
+                p_value = ut.get_p_val(trace, self.response_window, self.ophys_frame_rate)
+                sd_over_baseline = ut.get_sd_over_baseline(trace, self.response_window, self.baseline_window,
+                                                           self.ophys_frame_rate)
+                df_list.append(
+                    [sweep, cell_index, cell_specimen_id, trace, timestamps, mean_response, baseline_response,
+                     p_value,
+                     sd_over_baseline])  # , running_speed_trace, running_speed_timestamps, mean_running_speed])
+
+        columns = ['sweep', 'cell_index', 'cell_specimen_id', 'trace', 'timestamps', 'mean_response',
+                   'baseline_response',
+                   'p_value',
+                   'sd_over_baseline']  # , 'running_speed_trace', 'running_speed_timestamps', 'mean_running_speed']
+        response_df = pd.DataFrame(df_list, columns=columns)
+        response_df = response_df.merge(stimulus_block, on='sweep')
+        return response_df
+
+    def get_response_df_path(self, session_block_name):
+        path = os.path.join(self.dataset.analysis_dir, session_block_name + '_response_df.h5')
+        return path
+
+    def save_response_df(self, response_df, session_block_name):
+        print('saving response dataframe for', session_block_name)
+        response_df.to_hdf(self.get_response_df_path(session_block_name), key='df', format='fixed')
+
+    def get_response_df(self, session_block_name):
+        if self.overwrite_analysis_files:
+            print('overwriting analysis files')
+            response_df = self.generate_response_df(session_block_name)
+            self.save_response_df(response_df, session_block_name)
+        else:
+            if os.path.exists(self.get_response_df_path(session_block_name)):
+                print('loading response dataframe for', session_block_name)
+                response_df = pd.read_hdf(self.get_response_df_path(session_block_name), key='df', format='fixed')
+            else:
+                response_df = self.generate_response_df(session_block_name)
+                self.save_response_df(response_df, session_block_name)
+        return response_df
+
+
+

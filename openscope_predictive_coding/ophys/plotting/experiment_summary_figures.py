@@ -194,6 +194,31 @@ def format_table_data(dataset):
     table_data = table_data.transpose()
     return table_data
 
+def plot_mean_trace_with_stimulus_blocks(analysis, ax=None, save=False):
+    dataset = analysis.dataset
+    block_df = analysis.block_df
+
+    colors = sns.color_palette('deep')
+    if ax is None:
+        figsize=(20,5)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    ax.plot(dataset.timestamps_ophys, np.nanmean(dataset.dff_traces,axis=0))
+    ax.set_xlabel('time (seconds)')
+    ax.set_ylabel('dF/F')
+    ax.set_title('population average')
+
+    for i, block_name in enumerate(block_df.block_name.values):
+        start_time = block_df[block_df.block_name==block_name].start_time.values[0]
+        end_time = block_df[block_df.block_name==block_name].end_time.values[0]
+        ax.axvspan(start_time, end_time, facecolor=colors[i], edgecolor='none', alpha=0.3, linewidth=0, zorder=1, label=block_name)
+    ax.legend(bbox_to_anchor=(1,0.3))
+    if save:
+        fig.tight_layout()
+        plt.gcf().subplots_adjust(right=0.8)
+        save_figure(fig, figsize, dataset.analysis_dir, 'cell_traces', 'cell_'+str(cell_index))
+    return ax
+
 
 def plot_experiment_summary_figure(analysis, save_dir=None):
     interval_seconds = 600
@@ -216,38 +241,44 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(analysis.dataset.dff_traces,
                                                                                analysis.dataset.timestamps_ophys)
 
-    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.9), yspan=(0, .3))
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.2, 0.88), yspan=(0, .3))
     ax = plot_traces_heatmap(analysis.dataset.dff_traces, ax=ax)
     ax.set_xticks(np.arange(0, upper_limit, interval_seconds * ophys_frame_rate))
     ax.set_xticklabels(np.arange(0, upper_limit / ophys_frame_rate, interval_seconds))
     ax.set_xlabel('time (seconds)')
 
-    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.8), yspan=(.26, .41))
-    ax = plot_run_speed(analysis.dataset.running_speed.running_speed, analysis.dataset.timestamps_stimulus, ax=ax,
-                        label=True)
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.2, 0.77), yspan=(.3, .45))
+    ax = plot_mean_trace_with_stimulus_blocks(analysis, ax=ax)
     ax.set_xlim(time_interval[0], np.uint64(upper_limit / ophys_frame_rate))
     ax.set_xticks(np.arange(interval_seconds, upper_limit / ophys_frame_rate, interval_seconds))
     ax.set_xlabel('time (seconds)')
 
-    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.8), yspan=(.37, .52))
-    ax = plot_hit_false_alarm_rates(analysis.dataset.trials, ax=ax)
-    ax.set_xlim(time_interval[0], np.uint64(upper_limit / ophys_frame_rate))
-    ax.set_xticks(np.arange(interval_seconds, upper_limit / ophys_frame_rate, interval_seconds))
-    ax.legend(loc='upper right', ncol=2, borderaxespad=0.)
-    ax.set_xlabel('time (seconds)')
+    # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.8), yspan=(.26, .41))
+    # ax = plot_run_speed(analysis.dataset.running_speed.running_speed, analysis.dataset.timestamps_stimulus, ax=ax,
+    #                     label=True)
+    # ax.set_xlim(time_interval[0], np.uint64(upper_limit / ophys_frame_rate))
+    # ax.set_xticks(np.arange(interval_seconds, upper_limit / ophys_frame_rate, interval_seconds))
+    # ax.set_xlabel('time (seconds)')
+    #
+    # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.8), yspan=(.37, .52))
+    # ax = plot_hit_false_alarm_rates(analysis.dataset.trials, ax=ax)
+    # ax.set_xlim(time_interval[0], np.uint64(upper_limit / ophys_frame_rate))
+    # ax.set_xticks(np.arange(interval_seconds, upper_limit / ophys_frame_rate, interval_seconds))
+    # ax.legend(loc='upper right', ncol=2, borderaxespad=0.)
+    # ax.set_xlabel('time (seconds)')
+    #
+    # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .22), yspan=(.25, .8))
+    # ax = plot_lick_raster(analysis.dataset.trials, ax=ax, save_dir=None)
+    #
+    # ax = placeAxesOnGrid(fig, dim=(1, 4), xspan=(.2, .8), yspan=(.5, .8), wspace=0.35)
+    # mdf = ut.get_mean_df(analysis.trial_response_df,
+    #                      conditions=['cell', 'change_image_name', 'behavioral_response_type'])
+    # ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',
+    #                              condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None)
 
-    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .22), yspan=(.25, .8))
-    ax = plot_lick_raster(analysis.dataset.trials, ax=ax, save_dir=None)
-
-    ax = placeAxesOnGrid(fig, dim=(1, 4), xspan=(.2, .8), yspan=(.5, .8), wspace=0.35)
-    mdf = ut.get_mean_df(analysis.trial_response_df,
-                         conditions=['cell', 'change_image_name', 'behavioral_response_type'])
-    ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',
-                                 condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None)
-
-    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.97), yspan=(.3, .8))
-    mdf = ut.get_mean_df(analysis.trial_response_df, conditions=['cell', 'change_image_name'])
-    ax = plot_mean_image_response_heatmap(mdf, title=None, ax=ax, save_dir=None)
+    # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.97), yspan=(.3, .8))
+    # mdf = ut.get_mean_df(analysis.trial_response_df, conditions=['cell', 'change_image_name'])
+    # ax = plot_mean_image_response_heatmap(mdf, title=None, ax=ax, save_dir=None)
 
     fig.tight_layout()
 

@@ -293,7 +293,7 @@ def get_stimulus_table(lims_data, timestamps_stimulus):
     stimulus_table.insert(loc=0, column='sweep', value=sweeps)
 
     stimulus_table = stimulus_table.reset_index()
-    stimulus_table = stimulus_table.drop(columns=['lk'])
+    # stimulus_table = stimulus_table.drop(columns=['lk'])
 
     return stimulus_table
 
@@ -637,12 +637,13 @@ if __name__ == '__main__':
                       746271665, 750845430,
                       750846019, 752473630,
                       ]
-    # experiment_id = 746271249
-    experiment_id = 752473630
 
+    experiment_ids = [746271665, 750845430, 750846019, 752473630,
+                      755645219, 756118288, 758305436, 759037671]
 
+    experiment_id = 759037671
     cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis'
     convert_level_1_to_level_2(experiment_id, cache_dir=cache_dir)
-    # df = pd.read_csv(manifest)
-    # for i, experiment_id in enumerate(df.experiment_id.values):
+
+    # for experiment_id in experiment_ids:
     #     ophys_data = convert_level_1_to_level_2(int(experiment_id), cache_dir=cache_dir)
