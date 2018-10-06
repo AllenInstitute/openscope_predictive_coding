@@ -91,7 +91,10 @@ class ResponseAnalysis(object):
         if (self.overwrite_analysis_files is True) or (
                 session_block_name + '_block.h5' not in os.listdir(os.path.join(self.dataset.analysis_dir))):
             print('creating ' + session_block_name + ' block')
-            block = self.create_stimulus_block(session_block_name)
+            if session_block_name is 'oddball':
+                block = self.create_oddball_block()
+            else:
+                block = self.create_stimulus_block(session_block_name)
         elif (self.overwrite_analysis_files is False) and (
                 session_block_name + '_block.h5' in os.listdir(os.path.join(self.dataset.analysis_dir))):
             print('loading ' + session_block_name + ' block')

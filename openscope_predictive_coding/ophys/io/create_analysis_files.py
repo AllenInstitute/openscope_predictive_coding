@@ -14,12 +14,16 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     dataset = OpenScopePredictiveCodingDataset(experiment_id, cache_dir)
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files)
 
-    stimulus_table = analysis.dataset.stimulus_table.copy()
-    session_block_names = stimulus_table[stimulus_table.session_block_name.isin(
-        ['natural_movie_one', 'natural_movie_two']) == False].session_block_name.unique()
-    for session_block_name in session_block_names:
-        response_df = analysis.get_response_df(session_block_name)
+    response_df = analysis.get_response_df('oddball')
+    # stimulus_table = analysis.dataset.stimulus_table.copy()
+    # session_block_names = stimulus_table[stimulus_table.session_block_name.isin(
+    #     ['natural_movie_one', 'natural_movie_two']) == False].session_block_name.unique()
+    # for session_block_name in session_block_names:
+    #     response_df = analysis.get_response_df(session_block_name)
 
+    print('plotting experiment summary figure')
+    esf.plot_experiment_summary_figure(analysis)
+    print('plotting cell summary figures')
     for cell_index in dataset.cell_indices:
         sf.plot_cell_summary_figure(analysis, cell_index, save=True, show=True)
 
