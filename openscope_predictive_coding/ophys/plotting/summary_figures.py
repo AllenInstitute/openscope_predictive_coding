@@ -203,7 +203,7 @@ def get_xticks_xticklabels(trace, frame_rate, interval_sec=1):
     n_sec = n_frames / frame_rate
     xticks = np.arange(0, n_frames + 1, interval_frames)
     xticklabels = np.arange(0, n_sec + 0.1, interval_sec)
-    # xticklabels = xticklabels - n_sec / 2
+    xticklabels = xticklabels - n_sec / 2.
     return xticks, xticklabels
 
 

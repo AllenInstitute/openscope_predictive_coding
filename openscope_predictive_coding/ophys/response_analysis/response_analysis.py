@@ -28,7 +28,7 @@ class ResponseAnalysis(object):
     def __init__(self, dataset, overwrite_analysis_files=False):
         self.dataset = dataset
         self.overwrite_analysis_files = overwrite_analysis_files
-        self.sweep_window = [-1, 2]  # time, in seconds, around start time to extract portion of cell trace
+        self.sweep_window = [-2, 2]  # time, in seconds, around start time to extract portion of cell trace
         self.response_window_duration = 0.5  # window, in seconds, over which to take the mean for a given stimulus sweep
         self.response_window = [np.abs(self.sweep_window[0]), np.abs(self.sweep_window[0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
         self.baseline_window = np.asarray(
@@ -40,7 +40,7 @@ class ResponseAnalysis(object):
 
         # self.get_response_df()
         self.get_block_df()
-        self.get_oddball_block()
+        # self.get_oddball_block()
 
 
     def get_block_df(self):
