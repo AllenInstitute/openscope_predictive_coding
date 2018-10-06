@@ -63,6 +63,11 @@ class ResponseAnalysis(object):
         sequence_images = list(oddball_block.image_id.values[:4])
         return sequence_images
 
+    def get_oddball_images(self):
+        ob = self.oddball_block.copy()
+        oddball_images = ob[ob.image_id.isin(sequence_images) == False].image_id.unique()
+        return list(np.sort(oddball_images))
+
     def create_stimulus_block(self, session_block_name):
         stimulus_table = self.dataset.stimulus_table.copy()
         block = stimulus_table[stimulus_table.session_block_name == session_block_name]
