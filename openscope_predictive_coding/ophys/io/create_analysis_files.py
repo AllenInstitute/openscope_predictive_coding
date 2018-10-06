@@ -25,22 +25,22 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
 
 
 if __name__ == '__main__':
-    # import sys
-    #
-    # experiment_id = sys.argv[1]
-    # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/opc/opc_analysis'
-    # create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
+    import sys
 
-    experiment_ids = [746270939, 746271249,
-                      750534428, 752473496,
-                      746271665, 750845430,
-                      750846019, 752473630,
-                      746271665, 750845430, 750846019, 752473630,
-                      755645219, 756118288, 758305436, 759037671]
+    experiment_id = sys.argv[1]
+    cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/opc/opc_analysis'
+    create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
+
+    # experiment_ids = [746270939, 746271249,
+    #                   750534428, 752473496,
+    #                   746271665, 750845430,
+    #                   750846019, 752473630,
+    #                   746271665, 750845430, 750846019, 752473630,
+    #                   755645219, 756118288, 758305436, 759037671]
 
     # experiment_id = 756118288
 
-    cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis'
+    # cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis'
     # create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
-    for experiment_id in experiment_ids:
-        create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
+    # for experiment_id in experiment_ids:
+    #     create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)

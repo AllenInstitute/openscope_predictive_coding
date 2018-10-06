@@ -460,7 +460,7 @@ def plot_mean_response_by_image_block(analysis, cell, save_dir=None, ax=None):
 
 def plot_sequence_violation(analysis, cell_index, ax=None, save=False):
     dataset = analysis.dataset
-    oddball_block = analysis.oddball_block.copy()
+    oddball_block = analysis.get_oddball_block()
     ophys_frame_rate = dataset.metadata.ophys_frame_rate.values[0]
     if ax is None:
         figsize = (8, 5)

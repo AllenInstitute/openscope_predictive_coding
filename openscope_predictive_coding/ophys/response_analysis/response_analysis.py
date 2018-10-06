@@ -40,7 +40,7 @@ class ResponseAnalysis(object):
 
         # self.get_response_df()
         self.get_block_df()
-        # self.get_oddball_block()
+        self.get_oddball_block()
 
 
     def get_block_df(self):
