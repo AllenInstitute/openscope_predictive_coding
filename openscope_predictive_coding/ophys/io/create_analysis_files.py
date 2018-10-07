@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     experiment_id = sys.argv[1]
     cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/opc/opc_analysis'
-    create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
+    create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=False)
 
     # experiment_ids = [746270939, 746271249,
     #                   750534428, 752473496,

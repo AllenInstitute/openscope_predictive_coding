@@ -621,29 +621,16 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
 
 
 if __name__ == '__main__':
-    # import sys
-    #
-    # experiment_id = sys.argv[1]
-    # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
-    # # cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
-    # # cache_dir = r'/allen/aibs/informatics/swdb2018/visual_behavior'
-    # # experiment_id = 742828820
-    # ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir)
+    import sys
 
-    # import pandas as pd
-    #
-    experiment_ids = [746270939, 746271249,
-                      750534428, 752473496,
-                      746271665, 750845430,
-                      750846019, 752473630,
-                      ]
-
-    experiment_ids = [746271665, 750845430, 750846019, 752473630,
-                      755645219, 756118288, 758305436, 759037671]
-
-    experiment_id = 759037671
+    experiment_id = sys.argv[1]
     cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis'
-    convert_level_1_to_level_2(experiment_id, cache_dir=cache_dir)
+    ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir)
 
+    # lims_ids = [746270939, 746271249, 750534428, 752473496, 755645715,
+    #             754579284, 755000515, 755646041, 756118440,
+    #             746271665, 750845430, 750846019, 752473630,
+    #             755645219, 756118288, 758305436, 759037671]
+    # cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis'
     # for experiment_id in experiment_ids:
     #     ophys_data = convert_level_1_to_level_2(int(experiment_id), cache_dir=cache_dir)

@@ -9,7 +9,7 @@ lims_ids =  [746270939, 746271249, 750534428, 752473496, 755645715,
              746271665, 750845430, 750846019, 752473630,
              755645219, 756118288, 758305436, 759037671]
 
-python_file = r"/home/marinag/visual_behavior_analysis/visual_behavior/ophys/io/convert_level_1_to_level_2.py"
+python_file = r"/home/marinag/openscope_predictive_coding/openscope_predictive_coding/ophys/io/convert_level_1_to_level_2.py"
 
 jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords2'
 
