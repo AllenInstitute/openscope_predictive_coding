@@ -15,11 +15,11 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files)
 
     # response_df = analysis.get_response_df('oddball')
-    # stimulus_table = analysis.dataset.stimulus_table.copy()
-    # session_block_names = stimulus_table[stimulus_table.session_block_name.isin(
-    #     ['natural_movie_one', 'natural_movie_two']) == False].session_block_name.unique()
-    # for session_block_name in session_block_names:
-    #     response_df = analysis.get_response_df(session_block_name)
+    stimulus_table = analysis.dataset.stimulus_table.copy()
+    session_block_names = stimulus_table[stimulus_table.session_block_name.isin(
+        ['natural_movie_one', 'natural_movie_two']) == False].session_block_name.unique()
+    for session_block_name in session_block_names:
+        response_df = analysis.get_response_df(session_block_name)
 
     print('plotting experiment summary figure')
     esf.plot_experiment_summary_figure(analysis, save_dir = dataset.analysis_dir)
@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     experiment_id = sys.argv[1]
     cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/opc/opc_analysis'
-    create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=False)
+    create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
 
     # experiment_ids = [746270939, 746271249,
     #                   750534428, 752473496,
