@@ -65,6 +65,7 @@ class ResponseAnalysis(object):
 
     def get_oddball_images(self):
         ob = self.oddball_block.copy()
+        sequence_images = self.get_sequence_images()
         oddball_images = ob[ob.image_id.isin(sequence_images) == False].image_id.unique()
         return list(np.sort(oddball_images))
 

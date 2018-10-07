@@ -504,46 +504,31 @@ def plot_sequence_violation(analysis, cell_index, ax=None, save=False):
     return ax
 
 
-def plot_randomized_control_responses(dataset, cell_index, ax=None, save=False):
+def plot_randomized_control_responses(analysis, cell_index, ax=None, save=False):
     from scipy.stats import sem as compute_sem
-    stimulus_table = dataset.stimulus_table.copy()
-    ophys_frame_rate = dataset.metadata.ophys_frame_rate.values[0]
-    cell_trace = dataset.dff_traces[cell_index]
-
     if ax is None:
         figsize = (8,5)
         fig, ax = plt.subplots(figsize=figsize)
 
-    randomized_control_pre_block = stimulus_table[stimulus_table.session_block_name=='randomized_control_pre']
+    rc_pre = analysis.get_response_df('randomized_control_pre')
     mean = []
     sem = []
-    images = np.sort(randomized_control_pre_block.image_id.unique())
+    sequence_images = analysis.get_sequence_images()
+    oddballs = analysis.get_oddball_images()
+    images = sequence_images + oddballs
     for image_id in images:
-        means = []
-        start_times = randomized_control_pre_block[(randomized_control_pre_block.image_id==image_id)].start_time.values
-        for start_time in start_times:
-            trace, timestamps = ut.get_trace_around_timepoint(start_time, cell_trace,dataset.timestamps_ophys,[0,0.5], ophys_frame_rate)
-            mean_val = np.mean(trace)
-            means.append(mean_val)
+        means = rc_pre[(rc_pre.cell_index==cell_index)&(rc_pre.image_id==image_id)].mean_response.values
         mean.append(np.mean(means))
         sem.append(compute_sem(means))
-
     ax.errorbar(np.arange(0,len(images)),mean,yerr=sem,fmt='o',color='g',label='pre')
 
-    randomized_control_post_block = stimulus_table[stimulus_table.session_block_name=='randomized_control_post']
+    rc_post = analysis.get_response_df('randomized_control_post')
     mean = []
     sem = []
-    images = np.sort(randomized_control_post_block.image_id.unique())
     for image_id in images:
-        means = []
-        start_times = randomized_control_post_block[(randomized_control_post_block.image_id==image_id)].start_time.values
-        for start_time in start_times:
-            trace, timestamps = ut.get_trace_around_timepoint(start_time, cell_trace,dataset.timestamps_ophys,[0,0.5], ophys_frame_rate)
-            mean_val = np.mean(trace)
-            means.append(mean_val)
+        means = rc_post[(rc_post.cell_index==cell_index)&(rc_pre.image_id==image_id)].mean_response.values
         mean.append(np.mean(means))
         sem.append(compute_sem(means))
-
     ax.errorbar(np.arange(0,len(images)),mean,yerr=sem,fmt='o',color='m',label='post')
     ax.set_ylabel('mean dF/F')
     ax.set_xlabel('image_id')
@@ -553,9 +538,10 @@ def plot_randomized_control_responses(dataset, cell_index, ax=None, save=False):
     ax.legend(bbox_to_anchor=(1.3,1))
 
     if save:
-        save_figure(fig,figsize,dataset.analysis_dir,'randomized_control','cell_'+str(cell_index))
+        save_figure(fig,figsize,analysis.dataset.analysis_dir,'randomized_control','cell_'+str(cell_index))
         plt.close()
     return ax
+
 
 def plot_trace_with_stimulus_blocks(analysis, cell_index, ax=None, save=False):
     dataset = analysis.dataset
@@ -610,7 +596,7 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=True):
     ax.set_title('')
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.32, .6), yspan=(.22, .42))
-    ax = plot_randomized_control_responses(dataset, cell_index, ax=ax, save=False)
+    ax = plot_randomized_control_responses(analysis, cell_index, ax=ax, save=False)
     ax.set_title('randomized control blocks')
 
     # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.83, 1), yspan=(.78, 1))

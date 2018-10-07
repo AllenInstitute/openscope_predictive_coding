@@ -10,8 +10,10 @@ import matplotlib.pyplot as plt
 import visual_behavior.ophys.response_analysis.utilities as ut
 import visual_behavior.ophys.plotting.summary_figures as sf
 import seaborn as sns
-import matplotlib
-matplotlib.use('Agg')
+import platform
+if platform.system() == 'Linux':
+    import matplotlib
+    matplotlib.use('Agg')
 
 # formatting
 sns.set_style('white')
@@ -220,6 +222,36 @@ def plot_mean_trace_with_stimulus_blocks(analysis, ax=None, save=False):
     return ax
 
 
+def plot_mean_sequence_violation(analysis, ax=None, save=False):
+    dataset = analysis.dataset
+    oddball_df = analysis.get_response_df('oddball')
+    ophys_frame_rate = dataset.metadata.ophys_frame_rate.values[0]
+    if ax is None:
+        figsize = (8, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    traces = oddball_df[oddball_df.image_id == analysis.get_sequence_images()[3]].trace.values
+    ax = sf.plot_mean_trace(traces, ophys_frame_rate, color='b', interval_sec=0.5, ax=ax,
+                            legend_label='expected')
+
+    traces = oddball_df[oddball_df.oddball == True].trace.values
+    ax = sf.plot_mean_trace(traces, ophys_frame_rate, color='r', interval_sec=0.5, ax=ax,
+                            legend_label='unexpected')
+
+    ax.axvspan(len(np.mean(traces)) / 2., len(np.mean(traces)) / 2. + (0.25 * ophys_frame_rate), facecolor='gray',
+               edgecolor='none', alpha=0.3,
+               linewidth=0, zorder=1)
+    ax.set_title('population response')
+    ax.legend(loc='upper left')
+
+    if save:
+        fig.tight_layout()
+        plt.gcf().subplots_adjust(right=0.75)
+        save_figure(fig, figsize, dataset.analysis_dir, 'experiment_summary', 'oddball_response')
+        plt.close()
+    return ax
+
+
 def plot_experiment_summary_figure(analysis, save_dir=None):
     interval_seconds = 600
     ophys_frame_rate = 31
@@ -252,6 +284,9 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     ax.set_xlim(time_interval[0], np.uint64(upper_limit / ophys_frame_rate))
     ax.set_xticks(np.arange(interval_seconds, upper_limit / ophys_frame_rate, interval_seconds))
     ax.set_xlabel('time (seconds)')
+
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .4), yspan=(.45, .65))
+    ax = plot_mean_sequence_violation(analysis, ax=ax, save=False)
 
     # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.8), yspan=(.26, .41))
     # ax = plot_run_speed(analysis.dataset.running_speed.running_speed, analysis.dataset.timestamps_stimulus, ax=ax,
