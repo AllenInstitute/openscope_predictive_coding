@@ -3,20 +3,18 @@ from openscope_predictive_coding.ophys.dataset.openscope_predictive_coding_datas
 from openscope_predictive_coding.ophys.response_analysis.response_analysis import ResponseAnalysis
 import openscope_predictive_coding.ophys.plotting.summary_figures as sf
 import openscope_predictive_coding.ophys.plotting.experiment_summary_figures as esf
-
-
-import matplotlib
 import logging
-
-matplotlib.use('Agg')
-
+import platform
+if platform.system() == 'Linux':
+    import matplotlib
+    matplotlib.use('Agg')
 
 def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True):
     print('saving ', str(experiment_id), 'to', cache_dir)
     dataset = OpenScopePredictiveCodingDataset(experiment_id, cache_dir)
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files)
 
-    response_df = analysis.get_response_df('oddball')
+    # response_df = analysis.get_response_df('oddball')
     # stimulus_table = analysis.dataset.stimulus_table.copy()
     # session_block_names = stimulus_table[stimulus_table.session_block_name.isin(
     #     ['natural_movie_one', 'natural_movie_two']) == False].session_block_name.unique()
