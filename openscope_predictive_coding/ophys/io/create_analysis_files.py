@@ -24,7 +24,8 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     #     response_df = analysis.get_response_df(session_block_name)
 
     print('plotting experiment summary figure')
-    esf.plot_experiment_summary_figure(analysis)
+    esf.plot_experiment_summary_figure(analysis, save_dir = dataset.analysis_dir)
+    esf.plot_experiment_summary_figure(analysis, save_dir = cache_dir)
     print('plotting cell summary figures')
     for cell_index in dataset.cell_indices:
         sf.plot_cell_summary_figure(analysis, cell_index, save=True, show=True)

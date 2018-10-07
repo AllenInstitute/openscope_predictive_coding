@@ -322,6 +322,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
         save_figure(fig, figsize, save_dir, 'experiment_summary', analysis.dataset.analysis_folder)
 
 
+
 def plot_mean_first_flash_response_by_image_block(analysis, save_dir=None, ax=None):
     fdf = analysis.flash_response_df.copy()
     fdf.image_block = [int(image_block) for image_block in fdf.image_block.values]
