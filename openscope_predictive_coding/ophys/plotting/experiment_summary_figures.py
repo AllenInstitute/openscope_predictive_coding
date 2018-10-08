@@ -5,8 +5,6 @@ Created on Wednesday August 22 2018
 """
 import os
 import numpy as np
-import platform
-# if platform.system() == 'Linux':
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib as mpl

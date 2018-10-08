@@ -6,15 +6,13 @@ Created on Sunday July 15 2018
 import os
 import h5py
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import openscope_predictive_coding.ophys.response_analysis.utilities as ut
-import platform
-if platform.system() == 'Linux':
-    import matplotlib
-    matplotlib.use('Agg')
-# formatting
+
 sns.set_style('white')
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 sns.set_palette('deep')
