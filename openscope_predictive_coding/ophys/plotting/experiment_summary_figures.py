@@ -5,15 +5,16 @@ Created on Wednesday August 22 2018
 """
 import os
 import numpy as np
+import platform
+# if platform.system() == 'Linux':
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import openscope_predictive_coding.ophys.response_analysis.utilities as ut
 import openscope_predictive_coding.ophys.plotting.summary_figures as sf
 import seaborn as sns
-import platform
-if platform.system() == 'Linux':
-    import matplotlib
-    matplotlib.use('Agg')
+
 
 # formatting
 sns.set_style('white')
