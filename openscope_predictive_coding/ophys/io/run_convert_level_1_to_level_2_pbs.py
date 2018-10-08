@@ -11,7 +11,7 @@ lims_ids =  [746270939, 746271249, 750534428, 752473496, 755645715,
 
 python_file = r"/home/marinag/openscope_predictive_coding/openscope_predictive_coding/ophys/io/convert_level_1_to_level_2.py"
 
-jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords2'
+jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords_opc'
 
 job_settings = {'queue': 'braintv',
                 'mem': '60g',
