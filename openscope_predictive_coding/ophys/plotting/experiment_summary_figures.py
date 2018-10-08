@@ -7,8 +7,8 @@ import os
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import visual_behavior.ophys.response_analysis.utilities as ut
-import visual_behavior.ophys.plotting.summary_figures as sf
+import openscope_pedictive_coding.ophys.response_analysis.utilities as ut
+import openscope_pedictive_coding.ophys.plotting.summary_figures as sf
 import seaborn as sns
 import platform
 if platform.system() == 'Linux':
