@@ -1,7 +1,8 @@
+from __future__ import print_function
+
 import matplotlib
 matplotlib.use('Agg')
 
-from __future__ import print_function
 from openscope_predictive_coding.ophys.dataset.openscope_predictive_coding_dataset import OpenScopePredictiveCodingDataset
 from openscope_predictive_coding.ophys.response_analysis.response_analysis import ResponseAnalysis
 import openscope_predictive_coding.ophys.plotting.summary_figures as sf
