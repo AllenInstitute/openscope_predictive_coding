@@ -10,7 +10,7 @@ import openscope_predictive_coding.ophys.plotting.experiment_summary_figures as 
 import logging
 
 
-def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True):
+def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=False):
     print('saving ', str(experiment_id), 'to', cache_dir)
     dataset = OpenScopePredictiveCodingDataset(experiment_id, cache_dir)
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files)

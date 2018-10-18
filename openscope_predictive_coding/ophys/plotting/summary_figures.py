@@ -570,6 +570,60 @@ def plot_trace_with_stimulus_blocks(analysis, cell_index, ax=None, save=False):
         save_figure(fig, figsize, dataset.analysis_dir, 'cell_traces', 'cell_'+str(cell_index))
     return ax
 
+def plot_image_tuning_curve(rdf, image_ids, cell_index, label='pre', color='g',ax=None, save=False):
+    from scipy.stats import sem as compute_sem
+    if ax is None:
+        figsize = (8,5)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    mean = []
+    sem = []
+    for image_id in image_ids:
+        means = rdf[(rdf.cell_index==cell_index)&(rdf.image_id==image_id)].mean_response.values
+        mean.append(np.mean(means))
+        sem.append(compute_sem(means))
+    ax.plot(np.arange(0,len(image_ids)),mean,color=color)
+    ax.errorbar(np.arange(0,len(image_ids)),mean,yerr=sem,fmt='o',color=color,label=label)
+    ax.set_xticks(np.arange(0,len(image_ids),1))
+    ax.set_xticklabels([int(image_id) for image_id in image_ids])
+    ax.set_ylabel('dF/F')
+    ax.set_xlabel('image ID')
+    ax.set_title('cell '+str(cell_index))
+    return ax
+
+def plot_image_tc_across_stimulus_types(analysis, cell_index, ax=None, save_dir=None):
+    colors = sns.color_palette('deep')
+    sequence_images = analysis.get_sequence_images()
+    oddball_images = analysis.get_oddball_images()
+    image_ids = list(sequence_images) + list(oddball_images)
+    odf = analysis.get_response_df('oddball')
+    rc_pre = analysis.get_response_df('randomized_control_pre')
+    rc_post = analysis.get_response_df('randomized_control_post')
+    tdf = analysis.get_response_df('transition_control')
+
+    if ax is None:
+        figsize = (8, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    label = 'sequence'
+    ax = plot_image_tuning_curve(odf, image_ids, cell_index, label=label, color=colors[3], ax=ax, save=False)
+
+    label = 'randomized pre'
+    ax = plot_image_tuning_curve(rc_pre, image_ids, cell_index, label=label, color=colors[0], ax=ax, save=False)
+
+    label = 'randomized post'
+    ax = plot_image_tuning_curve(rc_post, image_ids, cell_index, label=label, color=colors[2], ax=ax, save=False)
+
+    label = 'transition control'
+    ax = plot_image_tuning_curve(tdf, image_ids, cell_index, label=label, color=colors[4], ax=ax, save=False)
+
+    ax.legend(loc='upper right')
+    ax.legend(bbox_to_anchor=(1.1, 1))
+    if save_dir:
+        save_figure(fig, figsize, analysis.dataset.analysis_dir, 'image_tuning_curves', 'cell_' + str(cell_index))
+        plt.close()
+    return ax
+
 
 def plot_cell_summary_figure(analysis, cell_index, save=False, show=True):
     dataset = analysis.dataset
@@ -595,9 +649,12 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=True):
     ax = plot_sequence_violation(analysis, cell_index, save=False, ax=ax)
     ax.set_title('')
 
-    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.32, .6), yspan=(.22, .42))
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.32, .58), yspan=(.22, .42))
     ax = plot_randomized_control_responses(analysis, cell_index, ax=ax, save=False)
     ax.set_title('randomized control blocks')
+
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.64, .9), yspan=(.22, .42))
+    ax = plot_image_tc_across_stimulus_types(analysis, cell_index, ax=ax, save_dir=None)
 
     # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.83, 1), yspan=(.78, 1))
     # table_data = format_table_data(dataset)
