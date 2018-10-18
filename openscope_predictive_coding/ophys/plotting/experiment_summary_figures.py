@@ -18,8 +18,6 @@ sns.set_style('white')
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 sns.set_palette('deep')
 
-import matplotlib
-matplotlib.use('Agg')
 
 def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hspace=None, sharex=False, sharey=False):
     '''

@@ -1,13 +1,13 @@
+import matplotlib
+matplotlib.use('Agg')
+
 from __future__ import print_function
 from openscope_predictive_coding.ophys.dataset.openscope_predictive_coding_dataset import OpenScopePredictiveCodingDataset
 from openscope_predictive_coding.ophys.response_analysis.response_analysis import ResponseAnalysis
 import openscope_predictive_coding.ophys.plotting.summary_figures as sf
 import openscope_predictive_coding.ophys.plotting.experiment_summary_figures as esf
 import logging
-import platform
-if platform.system() == 'Linux':
-    import matplotlib
-    matplotlib.use('Agg')
+
 
 def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True):
     print('saving ', str(experiment_id), 'to', cache_dir)
@@ -35,17 +35,14 @@ if __name__ == '__main__':
     experiment_id = sys.argv[1]
     cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/opc/opc_analysis'
     create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
-
-    # experiment_ids = [746270939, 746271249,
-    #                   750534428, 752473496,
-    #                   746271665, 750845430,
-    #                   750846019, 752473630,
-    #                   746271665, 750845430, 750846019, 752473630,
-    #                   755645219, 756118288, 758305436, 759037671]
-
-    # experiment_id = 756118288
-
+    #
+    # experiment_ids = [746270939, 746271249, 750534428, 752473496, 755645715,
+    #             754579284, 755000515, 755646041, 756118440,
+    #             746271665, 750845430, 750846019, 752473630,
+    #             755645219, 756118288, 758305436, 759037671]
+    # # experiment_id = 756118288
+    #
     # cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis'
-    # create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
+    # # create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
     # for experiment_id in experiment_ids:
-    #     create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
+    #     create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=False)
