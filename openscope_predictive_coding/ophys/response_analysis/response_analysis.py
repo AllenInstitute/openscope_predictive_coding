@@ -8,7 +8,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from visual_behavior.ophys.response_analysis import utilities as ut
+from openscope_predictive_coding.ophys.response_analysis import utilities as ut
 
 
 class ResponseAnalysis(object):
