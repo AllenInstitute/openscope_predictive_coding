@@ -536,7 +536,7 @@ def save_dff_traces(dff_traces, roi_metrics, lims_data):
     f.close()
 
 
-def save_timestamps(timestamps, dff_traces, core_data, roi_metrics, lims_data):
+def save_timestamps(timestamps, dff_traces, roi_metrics, lims_data):
     # remove spurious frames at end of ophys session - known issue with Scientifica data
     if dff_traces.shape[1] < timestamps['ophys_frames']['timestamps'].shape[0]:
         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
@@ -551,9 +551,9 @@ def save_timestamps(timestamps, dff_traces, core_data, roi_metrics, lims_data):
         dff_traces = dff_traces[:, :timestamps['ophys_frames']['timestamps'].shape[0]]
         save_dff_traces(dff_traces, roi_metrics, lims_data)
     # make sure length of timestamps equals length of running traces
-    running_speed = core_data['running'].speed.values
-    if len(running_speed) < timestamps['stimulus_frames']['timestamps'].shape[0]:
-        timestamps['stimulus_frames']['timestamps'] = timestamps['stimulus_frames']['timestamps'][:len(running_speed)]
+    # running_speed = core_data['running'].speed.values
+    # if len(running_speed) < timestamps['stimulus_frames']['timestamps'].shape[0]:
+    #     timestamps['stimulus_frames']['timestamps'] = timestamps['stimulus_frames']['timestamps'][:len(running_speed)]
     save_dataframe_as_h5(timestamps, 'timestamps', get_analysis_dir(lims_data))
 
 
@@ -686,7 +686,7 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     corrected_fluorescence_traces = get_corrected_fluorescence_traces(roi_metrics, lims_data)
     save_corrected_fluorescence_traces(corrected_fluorescence_traces, roi_metrics, lims_data)
 
-    save_timestamps(timestamps, dff_traces, core_data, roi_metrics, lims_data)
+    save_timestamps(timestamps, dff_traces, roi_metrics, lims_data)
 
     motion_correction = get_motion_correction(lims_data)
     save_motion_correction(motion_correction, lims_data)
@@ -700,8 +700,8 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     average_image = get_average_image(lims_data)
     save_average_image(average_image, lims_data)
 
-    roi_validation = get_roi_validation(lims_data)
-    save_roi_validation(roi_validation, lims_data)
+    # roi_validation = get_roi_validation(lims_data)
+    # save_roi_validation(roi_validation, lims_data)
     print('done converting')
     #
     # ophys_data = core_data.update(

@@ -311,7 +311,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     #                              condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.97), yspan=(.3, .8))
-    mdf = get_mean_df(analysis.response_df_dict['oddball'])
+    mdf = ut.get_mean_df(analysis.response_df_dict['oddball'])
     ax = plot_mean_image_response_heatmap(mdf, title='mean image response - oddball', ax=ax, save_dir=None)
     fig.tight_layout()
 
