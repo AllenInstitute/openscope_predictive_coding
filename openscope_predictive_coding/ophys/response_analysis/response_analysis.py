@@ -41,6 +41,8 @@ class ResponseAnalysis(object):
         # self.get_response_df()
         self.get_block_df()
         self.get_oddball_block()
+        self.get_image_ids()
+        self.get_response_df_dict()
 
 
     def get_block_df(self):
@@ -61,13 +63,30 @@ class ResponseAnalysis(object):
         stimulus_table = self.dataset.stimulus_table.copy()
         oddball_block = stimulus_table[stimulus_table.session_block_name == 'oddball']
         sequence_images = list(oddball_block.image_id.values[:4])
-        return sequence_images
+        self.sequence_images = sequence_images
+        return self.sequence_images
 
     def get_oddball_images(self):
         ob = self.oddball_block.copy()
         sequence_images = self.get_sequence_images()
         oddball_images = ob[ob.image_id.isin(sequence_images) == False].image_id.unique()
-        return list(np.sort(oddball_images))
+        self.oddball_images = list(np.sort(oddball_images))
+        return self.oddball_images
+
+    def get_image_ids(self):
+        sequence_images = self.get_sequence_images()
+        oddball_images = self.get_oddball_images()
+        self.image_ids = list(sequence_images) + list(oddball_images)
+        return self.image_ids
+
+    def get_stimulus_duration(self, session_block_name):
+        if session_block_name == 'oddball':
+            stimulus_duration = 0.23
+        elif 'control' in session_block_name:
+            stimulus_duration = 0.23
+        elif 'movie' in session_block_name:
+            stimulus_duration = 30.
+        return stimulus_duration
 
     def create_stimulus_block(self, session_block_name):
         stimulus_table = self.dataset.stimulus_table.copy()
@@ -147,6 +166,11 @@ class ResponseAnalysis(object):
     def generate_response_df(self, session_block_name):
         print('generating response dataframe for', session_block_name)
         stimulus_block = self.get_stimulus_block(session_block_name)
+        stimulus_duration = self.get_stimulus_duration(session_block_name)
+        sweep_window = [self.sweep_window[0], self.sweep_window[1] + stimulus_duration]
+        if 'movie' in session_block_name:
+            stimulus_block = stimulus_block[stimulus_block.data_file_index==0]
+            sweep_window = [0, stimulus_duration]
         df_list = []
         for cell_index in self.dataset.cell_indices:
             cell_specimen_id = self.dataset.get_cell_specimen_id_for_cell_index(cell_index)
@@ -156,7 +180,7 @@ class ResponseAnalysis(object):
 
                 trace, timestamps = ut.get_trace_around_timepoint(start_time, cell_trace,
                                                                   self.dataset.timestamps_ophys,
-                                                                  self.sweep_window, self.ophys_frame_rate)
+                                                                  sweep_window, self.ophys_frame_rate)
                 mean_response = ut.get_mean_in_window(trace, self.response_window, self.ophys_frame_rate)
                 baseline_response = ut.get_mean_in_window(trace, self.baseline_window, self.ophys_frame_rate)
                 p_value = ut.get_p_val(trace, self.response_window, self.ophys_frame_rate)
@@ -196,6 +220,18 @@ class ResponseAnalysis(object):
                 response_df = self.generate_response_df(session_block_name)
                 self.save_response_df(response_df, session_block_name)
         return response_df
+
+    def get_response_df_dict(self):
+        response_df_dict = {}
+        for session_block_name in self.dataset.stimulus_table.session_block_name.unique():
+            if 'movie' in session_block_name:
+                df = self.get_response_df(session_block_name)
+                response_df_dict[session_block_name] = df
+            else:
+                df = self.get_response_df(session_block_name)
+                response_df_dict[session_block_name] = df
+        self.response_df_dict = response_df_dict
+        return self.response_df_dict
 
 
 
