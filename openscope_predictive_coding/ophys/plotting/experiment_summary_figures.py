@@ -91,7 +91,7 @@ def plot_traces_heatmap(dff_traces, ax=None, save_dir=None):
         save_figure(fig, figsize, save_dir, 'experiment_summary', 'traces_heatmap')
     return ax
 
-def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None):
+def plot_mean_image_response_heatmap(analysis, mean_df, title=None, ax=None, save_dir=None):
     df = mean_df.copy()
     images = np.sort(df.image_id.unique())
     images = analysis.get_image_ids()
@@ -310,9 +310,9 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     # ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',
     #                              condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None)
 
-    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.97), yspan=(.3, .8))
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.97), yspan=(.45, .95))
     mdf = ut.get_mean_df(analysis.response_df_dict['oddball'])
-    ax = plot_mean_image_response_heatmap(mdf, title='mean image response - oddball', ax=ax, save_dir=None)
+    ax = plot_mean_image_response_heatmap(analysis, mdf, title='mean image response - oddball', ax=ax, save_dir=None)
     fig.tight_layout()
 
     if save_dir:

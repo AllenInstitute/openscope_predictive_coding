@@ -123,16 +123,16 @@ def get_fraction_responsive_trials(group):
 def get_mean_df(response_df, conditions=['cell_index', 'image_id']):
     rdf = response_df.copy()
 
-    mdf = rdf.groupby(conditions).apply(ut.get_mean_sem_trace)
+    mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
     mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace']]
     mdf = mdf.reset_index()
-    mdf = ut.annotate_mean_df_with_pref_stim(mdf)
+    mdf = annotate_mean_df_with_pref_stim(mdf)
 
-    fraction_significant_trials = rdf.groupby(conditions).apply(ut.get_fraction_significant_trials)
+    fraction_significant_trials = rdf.groupby(conditions).apply(get_fraction_significant_trials)
     fraction_significant_trials = fraction_significant_trials.reset_index()
     mdf['fraction_significant_trials'] = fraction_significant_trials.fraction_significant_trials
 
-    fraction_responsive_trials = rdf.groupby(conditions).apply(ut.get_fraction_responsive_trials)
+    fraction_responsive_trials = rdf.groupby(conditions).apply(get_fraction_responsive_trials)
     fraction_responsive_trials = fraction_responsive_trials.reset_index()
     mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
 
