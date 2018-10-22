@@ -460,7 +460,8 @@ def plot_mean_response_by_image_block(analysis, cell, save_dir=None, ax=None):
 
 def plot_sequence_violation(analysis, cell_index, ax=None, save=False):
     dataset = analysis.dataset
-    oddball_block = analysis.get_oddball_block()
+    oddball_block = analysis.oddball_block
+    # oddball_block = analysis.response_df_dict['oddball']
     ophys_frame_rate = dataset.metadata.ophys_frame_rate.values[0]
     if ax is None:
         figsize = (8, 5)
@@ -510,7 +511,7 @@ def plot_randomized_control_responses(analysis, cell_index, ax=None, save=False)
         figsize = (8,5)
         fig, ax = plt.subplots(figsize=figsize)
 
-    rc_pre = analysis.get_response_df('randomized_control_pre')
+    rc_pre = analysis.response_df_dict['randomized_control_pre']
     mean = []
     sem = []
     sequence_images = analysis.get_sequence_images()
@@ -522,7 +523,7 @@ def plot_randomized_control_responses(analysis, cell_index, ax=None, save=False)
         sem.append(compute_sem(means))
     ax.errorbar(np.arange(0,len(images)),mean,yerr=sem,fmt='o',color='g',label='pre')
 
-    rc_post = analysis.get_response_df('randomized_control_post')
+    rc_post = analysis.response_df_dict['randomized_control_post']
     mean = []
     sem = []
     for image_id in images:
@@ -593,13 +594,15 @@ def plot_image_tuning_curve(rdf, image_ids, cell_index, label='pre', color='g',a
 
 def plot_image_tc_across_stimulus_types(analysis, cell_index, ax=None, save_dir=None):
     colors = sns.color_palette('deep')
-    sequence_images = analysis.get_sequence_images()
-    oddball_images = analysis.get_oddball_images()
-    image_ids = list(sequence_images) + list(oddball_images)
-    odf = analysis.get_response_df('oddball')
-    rc_pre = analysis.get_response_df('randomized_control_pre')
-    rc_post = analysis.get_response_df('randomized_control_post')
-    tdf = analysis.get_response_df('transition_control')
+    # sequence_images = analysis.get_sequence_images()
+    # oddball_images = analysis.get_oddball_images()
+    image_ids = analysis.get_image_ids()
+    # image_ids = list(sequence_images) + list(oddball_images)
+    response_df_dict = analysis.response_df_dict.copy()
+    odf = response_df_dict['oddball']
+    rc_pre = response_df_dict['randomized_control_pre']
+    rc_post = response_df_dict['randomized_control_post']
+    tdf = response_df_dict['transition_control']
 
     if ax is None:
         figsize = (8, 5)

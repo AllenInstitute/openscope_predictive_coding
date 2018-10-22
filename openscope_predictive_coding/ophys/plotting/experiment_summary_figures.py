@@ -91,22 +91,22 @@ def plot_traces_heatmap(dff_traces, ax=None, save_dir=None):
         save_figure(fig, figsize, save_dir, 'experiment_summary', 'traces_heatmap')
     return ax
 
-
 def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None):
     df = mean_df.copy()
-    images = np.sort(df.change_image_name.unique())
+    images = np.sort(df.image_id.unique())
+    images = analysis.get_image_ids()
     cell_list = []
     for image in images:
-        tmp = df[(df.change_image_name == image) & (df.pref_stim == True)]
+        tmp = df[(df.image_id == image) & (df.pref_stim == True)]
         order = np.argsort(tmp.mean_response.values)[::-1]
-        cell_ids = list(tmp.cell.values[order])
+        cell_ids = list(tmp.cell_index.values[order])
         cell_list = cell_list + cell_ids
 
     response_matrix = np.empty((len(cell_list), len(images)))
     for i, cell in enumerate(cell_list):
         responses = []
         for image in images:
-            response = df[(df.cell == cell) & (df.change_image_name == image)].mean_response.values[0]
+            response = df[(df.cell_index == cell) & (df.image_id == image)].mean_response.values[0]
             responses.append(response)
         response_matrix[i, :] = np.asarray(responses)
 
@@ -120,7 +120,8 @@ def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None
     if title is None:
         title = 'mean response by image'
     ax.set_title(title, va='bottom', ha='center')
-    ax.set_xticklabels(images, rotation=90)
+    ax.set_xticks(np.arange(0,len(images),1))
+    ax.set_xticklabels([int(image) for image in images], rotation=90)
     ax.set_ylabel('cells')
     interval = 10
     ax.set_yticks(np.arange(0, response_matrix.shape[0], interval))
@@ -309,10 +310,9 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     # ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',
     #                              condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None)
 
-    # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.97), yspan=(.3, .8))
-    # mdf = ut.get_mean_df(analysis.trial_response_df, conditions=['cell', 'change_image_name'])
-    # ax = plot_mean_image_response_heatmap(mdf, title=None, ax=ax, save_dir=None)
-
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.97), yspan=(.3, .8))
+    mdf = get_mean_df(analysis.response_df_dict['oddball'])
+    ax = plot_mean_image_response_heatmap(mdf, title='mean image response - oddball', ax=ax, save_dir=None)
     fig.tight_layout()
 
     if save_dir:
