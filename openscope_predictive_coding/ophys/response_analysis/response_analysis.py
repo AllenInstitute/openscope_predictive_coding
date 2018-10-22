@@ -86,6 +86,8 @@ class ResponseAnalysis(object):
             stimulus_duration = 0.23
         elif 'movie' in session_block_name:
             stimulus_duration = 30.
+        elif 'occlusion' in session_block_name:
+            stimulus_duration = 0.5
         return stimulus_duration
 
     def create_stimulus_block(self, session_block_name):

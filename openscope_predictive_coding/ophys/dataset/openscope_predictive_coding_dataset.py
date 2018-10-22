@@ -179,11 +179,13 @@ class OpenScopePredictiveCodingDataset(object):
     max_projection = LazyLoadable('_max_projection', get_max_projection)
 
     def get_red_channel_image(self):
-        import tifffile
+        # import tifffile
+        from PIL import Image
         red_image_file = [file for file in os.listdir(self.analysis_dir) if 'red' in file]
         if len(red_image_file) > 0:
             red_image_file_path = os.path.join(self.analysis_dir, red_image_file[0])
-            self._red_channel_image = tifffile.imread(red_image_file_path)
+            # self._red_channel_image = tifffile.imread(red_image_file_path)
+            self._red_channel_image = Image.open(red_image_file_path)
         else:
             print('no red channel image for', self.experiment_id)
             self._red_channel_image = None
