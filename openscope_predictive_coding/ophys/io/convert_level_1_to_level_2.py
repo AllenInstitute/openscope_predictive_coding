@@ -400,6 +400,7 @@ def add_cell_specimen_ids_to_roi_metrics(roi_metrics, roi_locations):
     return roi_metrics
 
 
+
 def get_roi_metrics(lims_data):
     # objectlist.txt contains metrics associated with segmentation masks
     segmentation_dir = get_segmentation_dir(lims_data)
@@ -413,17 +414,29 @@ def get_roi_metrics(lims_data):
     # merge roi_metrics and roi_locations
     roi_metrics['id'] = roi_metrics.cell_specimen_id.values
     roi_metrics = pd.merge(roi_metrics, roi_locations, on='id')
+    unfiltered_roi_metrics = roi_metrics
     # remove invalid roi_metrics
     roi_metrics = roi_metrics[roi_metrics.valid == True]
+    # hack to get rid of cases with 2 rois at the same location
+    for cell_specimen_id in roi_metrics.cell_specimen_id.values:
+        roi_data = roi_metrics[roi_metrics.cell_specimen_id == cell_specimen_id]
+        if len(roi_data) > 1:
+            ind = roi_data.index
+            roi_metrics = roi_metrics.drop(index=ind.values)
     # add filtered cell index
     cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
                   roi_metrics.cell_specimen_id.values]
     roi_metrics['cell_index'] = cell_index
-    return roi_metrics
+    return roi_metrics, unfiltered_roi_metrics
+
 
 
 def save_roi_metrics(roi_metrics, lims_data):
     save_dataframe_as_h5(roi_metrics, 'roi_metrics', get_analysis_dir(lims_data))
+
+
+def save_unfiltered_roi_metrics(unfiltered_roi_metrics, lims_data):
+    save_dataframe_as_h5(unfiltered_roi_metrics, 'unfiltered_roi_metrics', get_analysis_dir(lims_data))
 
 
 def get_cell_specimen_ids(roi_metrics):
@@ -469,15 +482,50 @@ def save_roi_masks(roi_masks, lims_data):
     f.close()
 
 
+def get_corrected_fluorescence_traces(roi_metrics, lims_data):
+    file_path = os.path.join(get_ophys_experiment_dir(lims_data), 'demix', str(get_lims_id(lims_data)) + '_demixed_traces.h5')
+    g = h5py.File(file_path)
+    corrected_fluorescence_traces = np.asarray(g['data'])
+    valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
+    corrected_fluorescence_traces = corrected_fluorescence_traces[valid_roi_indices]
+    return corrected_fluorescence_traces
+
+
+def save_corrected_fluorescence_traces(corrected_fluorescence_traces, roi_metrics, lims_data):
+    traces_path = os.path.join(get_analysis_dir(lims_data), 'corrected_fluorescence_traces.h5')
+    f = h5py.File(traces_path, 'w')
+    for i, index in enumerate(get_cell_specimen_ids(roi_metrics)):
+        f.create_dataset(str(index), data=corrected_fluorescence_traces[i])
+    f.close()
+
+
 def get_dff_traces(roi_metrics, lims_data):
     dff_path = os.path.join(get_ophys_experiment_dir(lims_data), str(get_lims_id(lims_data)) + '_dff.h5')
     g = h5py.File(dff_path)
     dff_traces = np.asarray(g['data'])
     valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
     dff_traces = dff_traces[valid_roi_indices]
+    # find cells with NaN traces
+    bad_cell_indices = []
+    final_dff_traces = []
+    for i, dff in enumerate(dff_traces):
+        if np.isnan(dff).any():
+            print('NaN trace detected, removing cell_index:',i)
+            bad_cell_indices.append(i)
+        elif np.amax(dff)>20:
+            print('outlier trace detected, removing cell_index',i)
+            bad_cell_indices.append(i)
+        else:
+            final_dff_traces.append(dff)
+    dff_traces = np.asarray(final_dff_traces)
+    roi_metrics = roi_metrics[roi_metrics.cell_index.isin(bad_cell_indices) == False]
+    # reset cell index after removing bad cells
+    cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
+                  roi_metrics.cell_specimen_id.values]
+    roi_metrics['cell_index'] = cell_index
     print('length of traces:', dff_traces.shape[1])
     print('number of segmented cells:', dff_traces.shape[0])
-    return dff_traces
+    return dff_traces, roi_metrics
 
 
 def save_dff_traces(dff_traces, roi_metrics, lims_data):
@@ -488,7 +536,7 @@ def save_dff_traces(dff_traces, roi_metrics, lims_data):
     f.close()
 
 
-def save_timestamps(timestamps, dff_traces, lims_data):
+def save_timestamps(timestamps, dff_traces, core_data, roi_metrics, lims_data):
     # remove spurious frames at end of ophys session - known issue with Scientifica data
     if dff_traces.shape[1] < timestamps['ophys_frames']['timestamps'].shape[0]:
         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
@@ -501,12 +549,11 @@ def save_timestamps(timestamps, dff_traces, lims_data):
         print('length of ophys timestamps <  length of traces by', str(difference),
               'frames , truncating traces')
         dff_traces = dff_traces[:, :timestamps['ophys_frames']['timestamps'].shape[0]]
-        roi_metrics = get_roi_metrics(lims_data)
         save_dff_traces(dff_traces, roi_metrics, lims_data)
     # make sure length of timestamps equals length of running traces
-    # running_speed = core_data['running'].speed.values
-    # if len(running_speed) < timestamps['stimulus_frames']['timestamps'].shape[0]:
-    #     timestamps['stimulus_frames']['timestamps'] = timestamps['stimulus_frames']['timestamps'][:len(running_speed)]
+    running_speed = core_data['running'].speed.values
+    if len(running_speed) < timestamps['stimulus_frames']['timestamps'].shape[0]:
+        timestamps['stimulus_frames']['timestamps'] = timestamps['stimulus_frames']['timestamps'][:len(running_speed)]
     save_dataframe_as_h5(timestamps, 'timestamps', get_analysis_dir(lims_data))
 
 
@@ -538,22 +585,66 @@ def save_max_projection(max_projection, lims_data):
                  cmap='gray')
 
 
-def get_roi_validation(lims_data):
-    roi_validation = plot_roi_validation(lims_data)
-    return roi_validation
+def get_average_image(lims_data):
+    average_image = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'avgInt_a1X.png'))
+    return average_image
 
 
-def save_roi_validation(roi_validation, lims_data):
+def save_average_image(average_image, lims_data):
+    analysis_dir = get_analysis_dir(lims_data)
+    save_data_as_h5(average_image, 'average_image', analysis_dir)
+    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'average_image.png'), arr=average_image,
+                 cmap='gray')
+
+
+def run_roi_validation(lims_data):
+
+    processed_dir = get_processed_dir(lims_data)
+    file_path = os.path.join(processed_dir, 'roi_traces.h5')
+
+    with h5py.File(file_path) as g:
+        roi_traces = np.asarray(g['data'])
+        roi_names = np.asarray(g['roi_names'])
+
+    experiment_dir = get_ophys_experiment_dir(lims_data)
+    lims_id = get_lims_id(lims_data)
+
+    dff_path = os.path.join(experiment_dir, str(lims_id) + '_dff.h5')
+
+    with h5py.File(dff_path) as f:
+        dff_traces_original = np.asarray(f['data'])
+
+    roi_df = get_roi_locations(lims_data)
+    roi_metrics, unfiltered_roi_metrics = get_roi_metrics(lims_data)
+    roi_masks = get_roi_masks(roi_metrics, lims_data)
+    dff_traces, roi_metrics = get_dff_traces(roi_metrics, lims_data)
+    cell_specimen_ids = get_cell_specimen_ids(roi_metrics)
+    max_projection = get_max_projection(lims_data)
+
+    cell_indices = {id: get_cell_index_for_cell_specimen_id(id, cell_specimen_ids) for id in cell_specimen_ids}
+
+    return roi_names, roi_df, roi_traces, dff_traces_original, cell_specimen_ids, cell_indices, roi_masks, max_projection, dff_traces
+
+
+def get_roi_validation(lims_data,save_plots=False):
+
     analysis_dir = get_analysis_dir(lims_data)
 
-    for roi in roi_validation:
-        fig = roi['fig']
-        index = roi['index']
-        id = roi['id']
-        cell_index = roi['cell_index']
+    roi_names, roi_df, roi_traces, dff_traces_original, cell_specimen_ids, cell_indices, roi_masks, max_projection, dff_traces = run_roi_validation(lims_data)
 
-        save_figure(fig, (20, 10), analysis_dir, 'roi_validation',
-                    str(index) + '_' + str(id) + '_' + str(cell_index))
+    roi_validation = plot_roi_validation(
+        roi_names,
+        roi_df,
+        roi_traces,
+        dff_traces_original,
+        cell_specimen_ids,
+        cell_indices,
+        roi_masks,
+        max_projection,
+        dff_traces,
+    )
+
+    return roi_validation
 
 
 def convert_level_1_to_level_2(lims_id, cache_dir=None):
@@ -581,16 +672,21 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     # stimulus_template, stimulus_metadata = get_visual_stimulus_data(pkl)
     # save_visual_stimulus_data(stimulus_template, stimulus_metadata, lims_data)
 
-    roi_metrics = get_roi_metrics(lims_data)
-    save_roi_metrics(roi_metrics, lims_data)
+    roi_metrics, unfiltered_roi_metrics = get_roi_metrics(lims_data)
+
+    dff_traces, roi_metrics = get_dff_traces(roi_metrics, lims_data)
+    save_dff_traces(dff_traces, roi_metrics, lims_data)
 
     roi_masks = get_roi_masks(roi_metrics, lims_data)
     save_roi_masks(roi_masks, lims_data)
 
-    dff_traces = get_dff_traces(roi_metrics, lims_data)
-    save_dff_traces(dff_traces, roi_metrics, lims_data)
+    save_roi_metrics(roi_metrics, lims_data)
+    save_unfiltered_roi_metrics(unfiltered_roi_metrics, lims_data)
 
-    save_timestamps(timestamps, dff_traces, lims_data)
+    corrected_fluorescence_traces = get_corrected_fluorescence_traces(roi_metrics, lims_data)
+    save_corrected_fluorescence_traces(corrected_fluorescence_traces, roi_metrics, lims_data)
+
+    save_timestamps(timestamps, dff_traces, core_data, roi_metrics, lims_data)
 
     motion_correction = get_motion_correction(lims_data)
     save_motion_correction(motion_correction, lims_data)
@@ -600,6 +696,9 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
 
     # import matplotlib
     # matplotlib.use('Agg')
+
+    average_image = get_average_image(lims_data)
+    save_average_image(average_image, lims_data)
 
     roi_validation = get_roi_validation(lims_data)
     save_roi_validation(roi_validation, lims_data)
