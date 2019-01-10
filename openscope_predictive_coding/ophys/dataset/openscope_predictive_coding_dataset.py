@@ -147,6 +147,24 @@ class OpenScopePredictiveCodingDataset(object):
         return self._dff_traces
     dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
 
+    def get_corrected_fluorescence_traces(self):
+        with h5py.File(os.path.join(self.analysis_dir, 'corrected_fluorescence_traces.h5'), 'r') as corrected_fluorescence_traces_file:
+            corrected_fluorescence_traces = []
+            for key in corrected_fluorescence_traces_file.keys():
+                corrected_fluorescence_traces.append(np.asarray(corrected_fluorescence_traces[key]))
+        self._corrected_fluorescence_traces = np.asarray(corrected_fluorescence_traces)
+        return self._corrected_fluorescence_traces
+    corrected_fluorescence_traces = LazyLoadable('_corrected_fluorescence_traces', get_corrected_fluorescence_traces)
+
+    def get_neuropil_traces(self):
+        with h5py.File(os.path.join(self.analysis_dir, 'neuropil_traces.h5'), 'r') as neuropil_traces_file:
+            neuropil_traces = []
+            for key in neuropil_traces_file.keys():
+                neuropil_traces.append(np.asarray(neuropil_traces_file[key]))
+        self._neuropil_traces = np.asarray(neuropil_traces)
+        return self._neuropil_traces
+    neuropil_traces = LazyLoadable('_neuropilf_traces', get_neuropil_traces)
+
     def get_roi_metrics(self):
         self._roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df', format='fixed')
         return self._roi_metrics
@@ -179,13 +197,13 @@ class OpenScopePredictiveCodingDataset(object):
     max_projection = LazyLoadable('_max_projection', get_max_projection)
 
     def get_red_channel_image(self):
-        # import tifffile
-        from PIL import Image
-        red_image_file = [file for file in os.listdir(self.analysis_dir) if 'red' in file]
+        import tifffile
+        # from PIL import Image
+        red_image_file = [file for file in os.listdir(self.analysis_dir) if 'red' in file and 'metrics' not in file]
         if len(red_image_file) > 0:
             red_image_file_path = os.path.join(self.analysis_dir, red_image_file[0])
-            # self._red_channel_image = tifffile.imread(red_image_file_path)
-            self._red_channel_image = Image.open(red_image_file_path)
+            self._red_channel_image = tifffile.imread(red_image_file_path)
+            # self._red_channel_image = Image.open(red_image_file_path)
         else:
             print('no red channel image for', self.experiment_id)
             self._red_channel_image = None
@@ -242,6 +260,8 @@ class OpenScopePredictiveCodingDataset(object):
         # obj.get_stimulus_metadata()
         # obj.get_running_speed()
         obj.get_dff_traces()
+        obj.get_corrected_fluorescence_traces()
+        obj.get_neuropil_traces()
         obj.get_roi_metrics()
         obj.get_roi_mask_dict()
         obj.get_roi_mask_array()

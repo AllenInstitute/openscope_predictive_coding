@@ -72,11 +72,16 @@ def get_lims_id(lims_data):
 
 def get_analysis_folder_name(lims_data):
     date = str(lims_data.experiment_date.values[0])[:10].split('-')
+    specimen_driver_line = lims_data.specimen_driver_line.values[0].split(';')
+    if len(specimen_driver_line) >1:
+        specimen_driver_line = specimen_driver_line[1].split('-')[0]
+    else:
+        specimen_driver_line = specimen_driver_line[0]
     analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
                            str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
                            lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
-                           lims_data.specimen_driver_line.values[0].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \
-                           lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]
+                           specimen_driver_line + '_' + lims_data.rig.values[0][3:5] + \
+                           lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]  # NOQA: E127
     return analysis_folder_name
 
 
@@ -173,7 +178,7 @@ def get_metadata(lims_data, timestamps):
         metadata['experiment_container_id'] = None
     metadata['targeted_structure'] = lims_data.structure.values[0]
     metadata['imaging_depth'] = int(lims_data.depth.values[0])
-    metadata['cre_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0]
+    metadata['cre_line'] = lims_data.specimen_driver_line[0].split('-')[0]
     if len(lims_data['specimen_driver_line'].values[0].split(';')) > 1:
         metadata['reporter_line'] = lims_data['specimen_driver_line'].values[0].split(';')[1] + ';' + \
                                     lims_data['specimen_reporter_line'].values[0].split('(')[0]
@@ -482,23 +487,6 @@ def save_roi_masks(roi_masks, lims_data):
     f.close()
 
 
-def get_corrected_fluorescence_traces(roi_metrics, lims_data):
-    file_path = os.path.join(get_ophys_experiment_dir(lims_data), 'demix', str(get_lims_id(lims_data)) + '_demixed_traces.h5')
-    g = h5py.File(file_path)
-    corrected_fluorescence_traces = np.asarray(g['data'])
-    valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
-    corrected_fluorescence_traces = corrected_fluorescence_traces[valid_roi_indices]
-    return corrected_fluorescence_traces
-
-
-def save_corrected_fluorescence_traces(corrected_fluorescence_traces, roi_metrics, lims_data):
-    traces_path = os.path.join(get_analysis_dir(lims_data), 'corrected_fluorescence_traces.h5')
-    f = h5py.File(traces_path, 'w')
-    for i, index in enumerate(get_cell_specimen_ids(roi_metrics)):
-        f.create_dataset(str(index), data=corrected_fluorescence_traces[i])
-    f.close()
-
-
 def get_dff_traces(roi_metrics, lims_data):
     dff_path = os.path.join(get_ophys_experiment_dir(lims_data), str(get_lims_id(lims_data)) + '_dff.h5')
     g = h5py.File(dff_path)
@@ -533,6 +521,40 @@ def save_dff_traces(dff_traces, roi_metrics, lims_data):
     f = h5py.File(traces_path, 'w')
     for i, index in enumerate(get_cell_specimen_ids(roi_metrics)):
         f.create_dataset(str(index), data=dff_traces[i])
+    f.close()
+
+
+def get_corrected_fluorescence_traces(roi_metrics, lims_data):
+    file_path = os.path.join(get_ophys_experiment_dir(lims_data), 'demix', str(get_lims_id(lims_data)) + '_demixed_traces.h5')
+    g = h5py.File(file_path)
+    corrected_fluorescence_traces = np.asarray(g['data'])
+    valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
+    corrected_fluorescence_traces = corrected_fluorescence_traces[valid_roi_indices]
+    return corrected_fluorescence_traces
+
+
+def save_corrected_fluorescence_traces(corrected_fluorescence_traces, roi_metrics, lims_data):
+    traces_path = os.path.join(get_analysis_dir(lims_data), 'corrected_fluorescence_traces.h5')
+    f = h5py.File(traces_path, 'w')
+    for i, index in enumerate(get_cell_specimen_ids(roi_metrics)):
+        f.create_dataset(str(index), data=corrected_fluorescence_traces[i])
+    f.close()
+
+
+def get_neuropil_traces(roi_metrics, lims_data):
+    file_path = os.path.join(get_processed_dir(lims_data), 'neuropil_traces.h5')
+    g = h5py.File(file_path)
+    neuropil_traces = np.asarray(g['data'])
+    valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
+    neuropil_traces = neuropil_traces[valid_roi_indices]
+    return neuropil_traces
+
+
+def save_neuropil_traces(neuropil_traces, roi_metrics, lims_data):
+    traces_path = os.path.join(get_analysis_dir(lims_data), 'neuropil_traces.h5')
+    f = h5py.File(traces_path, 'w')
+    for i, index in enumerate(get_cell_specimen_ids(roi_metrics)):
+        f.create_dataset(str(index), data=neuropil_traces[i])
     f.close()
 
 
@@ -685,6 +707,9 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
 
     corrected_fluorescence_traces = get_corrected_fluorescence_traces(roi_metrics, lims_data)
     save_corrected_fluorescence_traces(corrected_fluorescence_traces, roi_metrics, lims_data)
+
+    neuropil_traces = get_neuropil_traces(roi_metrics, lims_data)
+    save_neuropil_traces(neuropil_traces, roi_metrics, lims_data)
 
     save_timestamps(timestamps, dff_traces, roi_metrics, lims_data)
 

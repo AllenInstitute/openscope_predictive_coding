@@ -668,6 +668,7 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=True):
     fig.tight_layout()
     if save:
         save_figure(fig, figsize, dataset.analysis_dir, 'cell_summary_plots', 'cell_' + str(cell_index))
+        save_figure(fig, figsize, dataset.cache_dir, 'cell_summary', dataset.analysis_folder + '_' + str(cell_index))
         if not show:
             plt.close()
 
