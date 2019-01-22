@@ -207,7 +207,8 @@ def get_xticks_xticklabels(trace, frame_rate, interval_sec=1):
     return xticks, xticklabels
 
 
-def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color='k', interval_sec=0.5, ax=None):
+def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color='k', interval_sec=0.5, xlims=[-2,2], ax=None):
+    xlims = [xlims[0] + np.abs(xlims[1]), xlims[1] + xlims[1]]
     if ax is None:
         fig, ax = plt.subplots()
     if len(traces) > 0:
@@ -218,8 +219,9 @@ def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color=
         ax.plot(trace, label=legend_label, linewidth=3, color=color)
         ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
         xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec)
-        ax.set_xticks(xticks)
-        ax.set_xticklabels(xticklabels)
+        ax.set_xticks([np.round(x,2) for x in xticks])
+        ax.set_xticklabels([np.round(x,1) for x in xticklabels])
+        ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
         ax.set_xlabel('time (sec)')
         ax.set_ylabel(ylabel)
     sns.despine(ax=ax)

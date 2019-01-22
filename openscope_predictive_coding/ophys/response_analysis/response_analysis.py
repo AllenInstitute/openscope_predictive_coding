@@ -74,12 +74,20 @@ class ResponseAnalysis(object):
         return self.oddball_images
 
     def get_image_ids(self):
+        """
+        :return: returns list of image_ids where the first 4 are the sequence images and the last 10 are the oddball images
+        """
         sequence_images = self.get_sequence_images()
         oddball_images = self.get_oddball_images()
         self.image_ids = list(sequence_images) + list(oddball_images)
         return self.image_ids
 
     def get_stimulus_duration(self, session_block_name):
+        """
+        This needs to be not hard coded, encode how these numbers were derived from the stim table
+        :param session_block_name:
+        :return:
+        """
         if session_block_name == 'oddball':
             stimulus_duration = 0.23
         elif 'control' in session_block_name:

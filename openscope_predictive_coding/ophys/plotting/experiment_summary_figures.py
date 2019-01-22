@@ -217,13 +217,101 @@ def plot_mean_trace_with_stimulus_blocks(analysis, ax=None, save=False):
     if save:
         fig.tight_layout()
         plt.gcf().subplots_adjust(right=0.8)
-        save_figure(fig, figsize, dataset.analysis_dir, 'cell_traces', 'cell_'+str(cell_index))
+        save_figure(fig, figsize, dataset.analysis_dir, 'population_average', str(dataset.experiment_id)+'_cell_average_stimulus_blocks')
+    return ax
+
+
+def plot_mean_neuropil_trace_with_stimulus_blocks(analysis, ax=None, save=False):
+    dataset = analysis.dataset
+    block_df = analysis.block_df
+
+    colors = sns.color_palette('deep')
+    if ax is None:
+        figsize=(20,5)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    ax.plot(dataset.timestamps_ophys, np.nanmean(dataset.neuropil_traces,axis=0))
+    ax.set_xlabel('time (seconds)')
+    ax.set_ylabel('F')
+    ax.set_title('neuropil mask population average')
+
+    for i, block_name in enumerate(block_df.block_name.values):
+        start_time = block_df[block_df.block_name==block_name].start_time.values[0]
+        end_time = block_df[block_df.block_name==block_name].end_time.values[0]
+        ax.axvspan(start_time, end_time, facecolor=colors[i], edgecolor='none', alpha=0.3, linewidth=0, zorder=1, label=block_name)
+    # ax.legend(bbox_to_anchor=(1,0.3))
+    if save:
+        fig.tight_layout()
+        plt.gcf().subplots_adjust(right=0.8)
+        sf.save_figure(fig, figsize, dataset.analysis_dir, 'population_average', str(dataset.experiment_id)+'_neuropil_average_stimulus_blocks')
+    return ax
+
+
+def plot_mean_cell_trace_with_oddballs(analysis, ax=None, save=False):
+    dataset = analysis.dataset
+    block_df = analysis.block_df
+    odf = analysis.response_df_dict['oddball']
+
+    colors = sns.color_palette('deep')
+    if ax is None:
+        figsize=(20,5)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    ax.plot(dataset.timestamps_ophys, np.nanmean(dataset.dff_traces,axis=0))
+    ax.set_xlabel('time (seconds)')
+    ax.set_ylabel('dF/F')
+    ax.set_title('population average with oddball stimuli')
+    ax.set_xlim(200, 2400)
+
+    indices = odf[(odf.cell_index==0)&(odf.oddball==True)].index
+    for i, oddball_index in enumerate(indices):
+        start_time = odf.iloc[oddball_index].start_time
+        end_time = odf.iloc[oddball_index].end_time +3
+        ax.axvspan(start_time, end_time, facecolor=colors[1], edgecolor='none', alpha=0.7, linewidth=0, zorder=1)
+    # ax.legend(bbox_to_anchor=(1,0.3))
+    if save:
+        fig.tight_layout()
+        plt.gcf().subplots_adjust(right=0.8)
+        sf.save_figure(fig, figsize, dataset.analysis_dir, 'population_average', str(dataset.experiment_id)+'_cell_average_oddball_stimuli')
+    return ax
+
+
+def plot_mean_neuropil_trace_with_oddballs(analysis, ax=None, save=False):
+    dataset = analysis.dataset
+    block_df = analysis.block_df
+    odf = analysis.response_df_dict['oddball']
+
+    colors = sns.color_palette('deep')
+    if ax is None:
+        figsize=(20,5)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    ax.plot(dataset.timestamps_ophys, np.nanmean(dataset.neuropil_traces,axis=0))
+    ax.set_xlabel('time (seconds)')
+    ax.set_ylabel('F')
+    ax.set_title('neuropil mask population average with oddball stimuli')
+    ax.set_xlim(200, 2400)
+
+    indices = odf[(odf.cell_index==0)&(odf.oddball==True)].index
+    for i, oddball_index in enumerate(indices):
+        start_time = odf.iloc[oddball_index].start_time
+        end_time = odf.iloc[oddball_index].end_time +3
+        ax.axvspan(start_time, end_time, facecolor=colors[1], edgecolor='none', alpha=0.7, linewidth=0, zorder=1)
+    # ax.legend(bbox_to_anchor=(1,0.3))
+    if save:
+        fig.tight_layout()
+        plt.gcf().subplots_adjust(right=0.8)
+        sf.save_figure(fig, figsize, dataset.analysis_dir, 'population_average', str(dataset.experiment_id)+'_neuropil_average_oddball_stimuli')
     return ax
 
 
 def plot_mean_sequence_violation(analysis, ax=None, save=False):
     dataset = analysis.dataset
-    oddball_df = analysis.get_response_df('oddball')
+    try:
+        oddball_df = analysis.response_df_dict['oddball']
+    except:
+        oddball_df = analysis.get_response_df('oddball')
+
     ophys_frame_rate = dataset.metadata.ophys_frame_rate.values[0]
     if ax is None:
         figsize = (8, 5)
@@ -278,13 +366,25 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     ax.set_xticklabels(np.arange(0, upper_limit / ophys_frame_rate, interval_seconds))
     ax.set_xlabel('time (seconds)')
 
-    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.2, 0.77), yspan=(.3, .45))
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.2, 0.78), yspan=(.3, .45))
     ax = plot_mean_trace_with_stimulus_blocks(analysis, ax=ax)
     ax.set_xlim(time_interval[0], np.uint64(upper_limit / ophys_frame_rate))
     ax.set_xticks(np.arange(interval_seconds, upper_limit / ophys_frame_rate, interval_seconds))
     ax.set_xlabel('time (seconds)')
 
-    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .4), yspan=(.45, .65))
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.2, 0.78), yspan=(.45, .6))
+    ax = plot_mean_neuropil_trace_with_stimulus_blocks(analysis, ax=ax)
+    ax.set_xlim(time_interval[0], np.uint64(upper_limit / ophys_frame_rate))
+    ax.set_xticks(np.arange(interval_seconds, upper_limit / ophys_frame_rate, interval_seconds))
+    ax.set_xlabel('time (seconds)')
+
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.2, 0.78), yspan=(.6, .75))
+    ax = plot_mean_cell_trace_with_oddballs(analysis, ax=ax)
+    # ax.set_xlim(time_interval[0], np.uint64(upper_limit / ophys_frame_rate))
+    # ax.set_xticks(np.arange(interval_seconds, upper_limit / ophys_frame_rate, interval_seconds))
+    ax.set_xlabel('time (seconds)')
+
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.2, .65), yspan=(.78, .98))
     ax = plot_mean_sequence_violation(analysis, ax=ax, save=False)
 
     # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.8), yspan=(.26, .41))
