@@ -447,8 +447,9 @@ def pickle_file_to_interval_table(pickle_file_name, version=1):
     elif 'StimC' in pickle_file_name:
         stimtable_df = get_interval_table(version=version, session='C')
     else:
-        raise Exception
-        print('unknown pickle file name')
+        # production experiments have a different file name but we know they are session A
+        stimtable_df = get_interval_table(version=version, session='A')
+        print('WARNING: using hack for production experiment stimulus table - need to fix this')
 
     data = pickle.load(open(pickle_file_name, 'r'))
     
