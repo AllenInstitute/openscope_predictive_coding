@@ -3,7 +3,7 @@
 import matplotlib
 matplotlib.use('Agg')
 
-from visual_behavior.ophys.io.create_analysis_files import create_analysis_files
+from openscope_predictive_coding.ophys.io.create_analysis_files import create_analysis_files
 
 
 

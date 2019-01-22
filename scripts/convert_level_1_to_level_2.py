@@ -3,7 +3,7 @@
 import matplotlib
 matplotlib.use('Agg')
 
-from visual_behavior.ophys.io.convert_level_1_to_level_2 import convert_level_1_to_level_2
+from openscope_predictive_coding.ophys.io.convert_level_1_to_level_2 import convert_level_1_to_level_2
 
 
 if __name__ == '__main__':

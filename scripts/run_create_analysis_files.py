@@ -11,7 +11,7 @@ cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/opc/opc_analysis'
 manifest = pd.read_excel(os.path.join(cache_dir, 'opc_manifest.xlsx'))
 experiment_ids = manifest['Experiment ID(s)'].values
 
-python_file = r"/home/marinag/visual_behavior_analysis/scripts/create_analysis_files.py"
+python_file = r"/home/marinag/openscope_predictive_coding/scripts/create_analysis_files.py"
 
 jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords_opc'
 

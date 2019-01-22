@@ -4,7 +4,7 @@ import matplotlib
 matplotlib.use('Agg')
 
 import pandas as pd
-from visual_behavior.ophys.io.create_multi_session_mean_df import get_multi_session_mean_df
+from openscope_predictive_coding.ophys.io.create_multi_session_mean_df import get_multi_session_mean_df
 
 if __name__ == '__main__':
 
