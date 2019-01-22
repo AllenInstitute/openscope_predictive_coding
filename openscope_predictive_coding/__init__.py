@@ -3,7 +3,7 @@ import numpy as np
 
 data_path = os.path.join(os.path.dirname(__file__), 'data')
 stimtable_path = os.path.join(os.path.dirname(__file__), 'scripts', 'ophys')
-boc_path = '/home/nicholasc/boc'
+boc_path = '/home/marinag/boc'
 
 SEQUENCE_IMAGES = {}
 SEQUENCE_IMAGES['A'] = (68, 78, 13, 26)
