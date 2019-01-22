@@ -9,8 +9,6 @@ from visual_behavior.ophys.io.create_analysis_files import create_analysis_files
 
 if __name__ == '__main__':
     import sys
-
     experiment_id = sys.argv[1]
     cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/opc/opc_analysis'
-    # cache_dir = r'/allen/programs/braintv/workgroups/ophysdev/OPhysCore/Analysis/2018-08 - Behavior Integration test'
-    create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=False)
+    create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
