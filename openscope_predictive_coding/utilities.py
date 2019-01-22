@@ -447,8 +447,8 @@ def pickle_file_to_interval_table(pickle_file_name, version=1):
     elif 'StimC' in pickle_file_name:
         stimtable_df = get_interval_table(version=version, session='C')
     else:
-        raise
-
+        raise Exception
+        print('unknown pickle file name')
 
     data = pickle.load(open(pickle_file_name, 'r'))
     
