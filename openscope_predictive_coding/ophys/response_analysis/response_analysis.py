@@ -206,7 +206,8 @@ class ResponseAnalysis(object):
                    'p_value',
                    'sd_over_baseline']  # , 'running_speed_trace', 'running_speed_timestamps', 'mean_running_speed']
         response_df = pd.DataFrame(df_list, columns=columns)
-        response_df = response_df.merge(stimulus_block, on='sweep')
+        if session_block_name != 'oddball':
+            response_df = response_df.merge(stimulus_block, on='sweep')
         return response_df
 
     def get_response_df_path(self, session_block_name):
@@ -229,6 +230,9 @@ class ResponseAnalysis(object):
             else:
                 response_df = self.generate_response_df(session_block_name)
                 self.save_response_df(response_df, session_block_name)
+        if session_block_name == 'oddball':
+            stimulus_block = self.get_stimulus_block(session_block_name)
+            response_df = response_df.merge(stimulus_block, on='sweep')
         return response_df
 
     def get_response_df_dict(self):
