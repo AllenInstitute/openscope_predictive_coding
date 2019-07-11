@@ -8,8 +8,8 @@ from pbstools import PythonJob # flake8: noqa: E999
 
 
 cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/opc/opc_analysis'
-manifest = pd.read_excel(os.path.join(cache_dir, 'opc_manifest.xlsx'))
-experiment_ids = manifest['Experiment ID(s)'].values
+manifest = pd.read_excel(os.path.join(cache_dir, 'opc_production_manifest.xlsx'))
+experiment_ids = manifest['experiment_id'].values
 
 python_file = r"/home/marinag/openscope_predictive_coding/scripts/convert_level_1_to_level_2.py"
 

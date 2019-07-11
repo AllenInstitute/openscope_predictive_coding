@@ -7,7 +7,7 @@ import os
 import h5py
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -480,7 +480,7 @@ def plot_sequence_violation(analysis, cell_index, ax=None, save=False):
         traces.append(trace)
 
     ax = plot_mean_trace(traces, ophys_frame_rate, color='b', interval_sec=0.5, ax=ax,
-                         legend_label='habituated sequence')
+                     legend_label='habituated sequence', xlims=[-1,1])
 
     start_times = oddball_block[
         (oddball_block.violation_sequence == True) & (oddball_block.sequence_start == True)].start_time.values
@@ -491,7 +491,7 @@ def plot_sequence_violation(analysis, cell_index, ax=None, save=False):
                                                           [0, 2], ophys_frame_rate)
         traces.append(trace)
     ax = plot_mean_trace(traces, ophys_frame_rate, color='r', interval_sec=0.5, ax=ax,
-                         legend_label='violation sequence')
+                         legend_label='violation sequence', xlims=[-1,1])
     ax.axvspan(0.75 * ophys_frame_rate, 1 * ophys_frame_rate, facecolor='gray', edgecolor='none', alpha=0.3,
                linewidth=0, zorder=1)
     cell_specimen_id = dataset.get_cell_specimen_id_for_cell_index(cell_index)

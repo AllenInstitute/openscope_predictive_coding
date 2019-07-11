@@ -6,7 +6,7 @@ Created on Wednesday August 22 2018
 import os
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import openscope_predictive_coding.ophys.response_analysis.utilities as ut
