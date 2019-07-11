@@ -55,7 +55,7 @@ class ResponseAnalysis(object):
         block_df['end_frame'] = maxs.values
         block_df['start_time'] = [self.dataset.timestamps_stimulus[frame] for frame in block_df.start_frame.values]
         block_df['end_time'] = [self.dataset.timestamps_stimulus[frame] for frame in block_df.end_frame.values]
-        block_df.to_hdf(os.path.join(self.dataset.analysis_dir, 'block_df.h5'), key='df', format='fixed')
+        block_df.to_hdf(os.path.join(self.dataset.analysis_dir, 'block_df.h5'), key='df')
         self.block_df = block_df
         return self.block_df
 
@@ -119,7 +119,7 @@ class ResponseAnalysis(object):
             block.loc[indices - 2, 'violation_sequence'] = True
             block.loc[indices - 3, 'violation_sequence'] = True
         print('saving', session_block_name, 'block')
-        block.to_hdf(os.path.join(self.dataset.analysis_dir, session_block_name + '_block.h5'), key='df', format='fixed')
+        block.to_hdf(os.path.join(self.dataset.analysis_dir, session_block_name + '_block.h5'), key='df')
         return block
 
     def get_stimulus_block(self, session_block_name):
@@ -133,8 +133,7 @@ class ResponseAnalysis(object):
         elif (self.overwrite_analysis_files is False) and (
                 session_block_name + '_block.h5' in os.listdir(os.path.join(self.dataset.analysis_dir))):
             print('loading ' + session_block_name + ' block')
-            block = pd.read_hdf(os.path.join(self.dataset.analysis_dir, session_block_name + '_block.h5'), key='df',
-                                format='fixed')
+            block = pd.read_hdf(os.path.join(self.dataset.analysis_dir, session_block_name + '_block.h5'), key='df')
         return block
 
     def create_oddball_block(self):
@@ -157,7 +156,7 @@ class ResponseAnalysis(object):
         oddball_block.loc[indices - 2, 'violation_sequence'] = True
         oddball_block.loc[indices - 3, 'violation_sequence'] = True
         print('saving oddball block')
-        oddball_block.to_hdf(os.path.join(self.dataset.analysis_dir, 'oddball_block.h5'), key='df', format='fixed')
+        oddball_block.to_hdf(os.path.join(self.dataset.analysis_dir, 'oddball_block.h5'), key='df')
         self.oddball_block = oddball_block
         return self.oddball_block
 
@@ -169,8 +168,7 @@ class ResponseAnalysis(object):
         elif (self.overwrite_analysis_files is False) and (
             'oddball_block.h5' in os.listdir(os.path.join(self.dataset.analysis_dir))):
             print('loading oddball block')
-            self.oddball_block = pd.read_hdf(os.path.join(self.dataset.analysis_dir, 'oddball_block.h5'), key='df',
-                                             format='fixed')
+            self.oddball_block = pd.read_hdf(os.path.join(self.dataset.analysis_dir, 'oddball_block.h5'), key='df')
         return self.oddball_block
 
     def generate_response_df(self, session_block_name):
@@ -216,7 +214,7 @@ class ResponseAnalysis(object):
 
     def save_response_df(self, response_df, session_block_name):
         print('saving response dataframe for', session_block_name)
-        response_df.to_hdf(self.get_response_df_path(session_block_name), key='df', format='fixed')
+        response_df.to_hdf(self.get_response_df_path(session_block_name), key='df')
 
     def get_response_df(self, session_block_name):
         if self.overwrite_analysis_files:
@@ -226,13 +224,15 @@ class ResponseAnalysis(object):
         else:
             if os.path.exists(self.get_response_df_path(session_block_name)):
                 print('loading response dataframe for', session_block_name)
-                response_df = pd.read_hdf(self.get_response_df_path(session_block_name), key='df', format='fixed')
+                response_df = pd.read_hdf(self.get_response_df_path(session_block_name), key='df')
             else:
                 response_df = self.generate_response_df(session_block_name)
                 self.save_response_df(response_df, session_block_name)
         if session_block_name == 'oddball':
-            stimulus_block = self.get_stimulus_block(session_block_name)
-            response_df = response_df.merge(stimulus_block, on='sweep')
+            if 'oddball' not in response_df.keys():
+                print('merging oddball response with stim block')
+                stimulus_block = self.get_stimulus_block(session_block_name)
+                response_df = response_df.merge(stimulus_block, on='sweep')
         return response_df
 
     def get_response_df_dict(self):

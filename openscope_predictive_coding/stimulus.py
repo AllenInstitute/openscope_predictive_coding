@@ -217,7 +217,7 @@ def get_stimulus_template_warped(stimulus_key, data_path=default_data_path, mani
                 data_warp[fi,:,:] = img_warp_lm_ds
             else:
                 raise RuntimeError
-            print stimulus_key, fi
+            print(stimulus_key, fi)
         assert hash_dict[stimulus_key] == get_hash(data_warp)
         np.save(data_warp_path, data_warp)
     

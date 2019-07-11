@@ -20,4 +20,4 @@ def get_stimulus(t, session):
 
 if __name__ == '__main__':
 
-    print get_stimulus(500., 'A')
+    print(get_stimulus(500., 'A'))

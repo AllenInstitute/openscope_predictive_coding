@@ -268,7 +268,7 @@ class memoized(object):
 def tiff_to_numpy(input_file_name):
     assert input_file_name[-4:] == '.tif'
     save_file_name = input_file_name[:-4] + '.npy'
-    print save_file_name
+    print(save_file_name)
     np.save(save_file_name, sio.imread(input_file_name))
 
 def file_name_to_stimulus_hash(file_name):
@@ -449,10 +449,9 @@ def pickle_file_to_interval_table(pickle_file_name, version=1):
     else:
         # production experiments have a different file name but we know they are session A
         stimtable_df = get_interval_table(version=version, session='A')
-        print('WARNING: using hack for production experiment stimulus table - need to fix this')
+        print('using hard coded for production experiment session type for stim A')
 
-    data = pickle.load(open(pickle_file_name, 'r'))
-    
+    data = pd.read_pickle(pickle_file_name)
 
     data_file_name_to_frame_inds_dict = collections.defaultdict(list)
     data_file_name_to_data_file_indices = collections.defaultdict(list)

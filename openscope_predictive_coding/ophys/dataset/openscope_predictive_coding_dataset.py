@@ -87,12 +87,12 @@ class OpenScopePredictiveCodingDataset(object):
     analysis_dir = LazyLoadable('_analysis_dir', get_analysis_dir)
 
     def get_metadata(self):
-        self._metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df', format='fixed')
+        self._metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df')
         return self._metadata
     metadata = LazyLoadable('_metadata', get_metadata)
 
     def get_timestamps(self):
-        self._timestamps = pd.read_hdf(os.path.join(self.analysis_dir, 'timestamps.h5'), key='df', format='fixed')
+        self._timestamps = pd.read_hdf(os.path.join(self.analysis_dir, 'timestamps.h5'), key='df')
         return self._timestamps
     timestamps = LazyLoadable('_timestamps', get_timestamps)
 
@@ -107,7 +107,7 @@ class OpenScopePredictiveCodingDataset(object):
     timestamps_ophys = LazyLoadable('_timestamps_ophys', get_timestamps_ophys)
 
     def get_stimulus_table(self):
-        self._stimulus_table = pd.read_hdf(os.path.join(self.analysis_dir, 'stimulus_table.h5'), key='df', format='fixed')
+        self._stimulus_table = pd.read_hdf(os.path.join(self.analysis_dir, 'stimulus_table.h5'), key='df')
         return self._stimulus_table
     stimulus_table = LazyLoadable('_stimulus_table', get_stimulus_table)
 
@@ -126,14 +126,13 @@ class OpenScopePredictiveCodingDataset(object):
     # def get_stimulus_metadata(self):
     #     self._stimulus_metadata = pd.read_hdf(
     #         os.path.join(self.analysis_dir, 'stimulus_metadata.h5'),
-    #         key='df', format='fixed'
-    #     )
+    #         key='df' )
     #     self._stimulus_metadata = self._stimulus_metadata.drop(columns='image_category')
     #     return self._stimulus_metadata
     # stimulus_metadata = LazyLoadable('_stimulus_metadata', get_stimulus_metadata)
     #
     # def get_running_speed(self):
-    #     self._running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running_speed.h5'), key='df', format='fixed')
+    #     self._running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running_speed.h5'), key='df')
     #     return self._running_speed
     # running_speed = LazyLoadable('_running_speed', get_running_speed)
     #
@@ -166,7 +165,7 @@ class OpenScopePredictiveCodingDataset(object):
     neuropil_traces = LazyLoadable('_neuropilf_traces', get_neuropil_traces)
 
     def get_roi_metrics(self):
-        self._roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df', format='fixed')
+        self._roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df')
         return self._roi_metrics
     roi_metrics = LazyLoadable('_roi_metrics', get_roi_metrics)
 
@@ -181,9 +180,9 @@ class OpenScopePredictiveCodingDataset(object):
     roi_mask_dict = LazyLoadable('_roi_mask_dict', get_roi_mask_dict)
 
     def get_roi_mask_array(self):
-        w, h = self.roi_mask_dict[self.roi_mask_dict.keys()[0]].shape
-        roi_mask_array = np.empty((len(self.roi_mask_dict.keys()), w, h))
-        for cell_specimen_id in self.roi_mask_dict.keys():
+        w, h = self.roi_mask_dict[list(self.roi_mask_dict.keys())[0]].shape
+        roi_mask_array = np.empty((len(list(self.roi_mask_dict.keys())), w, h))
+        for cell_specimen_id in list(self.roi_mask_dict.keys()):
             cell_index = self.get_cell_index_for_cell_specimen_id(int(cell_specimen_id))
             roi_mask_array[cell_index] = self.roi_mask_dict[cell_specimen_id]
         self._roi_mask_array = roi_mask_array
@@ -213,8 +212,7 @@ class OpenScopePredictiveCodingDataset(object):
     def get_motion_correction(self):
         self._motion_correction = pd.read_hdf(
             os.path.join(self.analysis_dir, 'motion_correction.h5'),
-            key='df', format='fixed'
-        )
+            key='df')
         return self._motion_correction
     motion_correction = LazyLoadable('_motion_correction', get_motion_correction)
 

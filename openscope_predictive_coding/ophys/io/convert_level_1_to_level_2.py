@@ -42,7 +42,7 @@ def save_data_as_h5(data, name, analysis_dir):
 
 
 def save_dataframe_as_h5(df, name, analysis_dir):
-    df.to_hdf(os.path.join(analysis_dir, name + '.h5'), key='df', format='fixed')
+    df.to_hdf(os.path.join(analysis_dir, name + '.h5'), key='df')
 
 
 def get_cache_dir(cache_dir=None):
