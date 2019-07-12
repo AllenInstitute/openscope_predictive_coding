@@ -47,4 +47,4 @@ OCCLUSION_NUM_DOT_to_FRACTION = {0:0., 20:.15, 44:.3, 66:.4, 100:.5, 136:.6}
 for key in OCCLUSION_NUM_DOT_to_FRACTION:
     assert key in OCCLUSION_NUM_DOT_LIST
 
-import stimulus
+import .stimulus
