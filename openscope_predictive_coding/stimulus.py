@@ -8,7 +8,7 @@ from allensdk.core.brain_observatory_cache import BrainObservatoryCache
 import allensdk.brain_observatory.stimulus_info as si
 import openscope_predictive_coding as opc
 from openscope_predictive_coding.utilities import get_hash, apply_warp_natural_scene, apply_warp_natural_movie, luminance_match, downsample_monitor_to_template, get_shuffled_repeated_sequence, generate_sequence_block, seq_to_str, get_shuffled_repeated_sequence, generate_sequence_block, generate_oddball_block_timing_dict, generate_pair_block_timing_dict, memoized
-from . import occlusion.get_occlusion_data_metadata
+from .occlusion import get_occlusion_data_metadata
 
 default_manifest = os.path.join(opc.boc_path, 'boc/manifest.json')
 default_data_path = opc.data_path
