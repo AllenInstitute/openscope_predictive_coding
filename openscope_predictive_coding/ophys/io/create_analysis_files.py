@@ -11,10 +11,6 @@ import logging
 
 
 def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True):
-
-    from openscope_predictive_coding.ophys.io.convert_level_1_to_level_2 import convert_level_1_to_level_2
-    ophys_data = convert_level_1_to_level_2(int(experiment_id), cache_dir=cache_dir)
-
     print('saving ', str(experiment_id), 'to', cache_dir)
     dataset = OpenScopePredictiveCodingDataset(experiment_id, cache_dir)
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files)
@@ -35,11 +31,11 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
 
 
 if __name__ == '__main__':
-    # import sys
-    #
-    # experiment_id = sys.argv[1]
-    # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/opc/opc_analysis'
-    # create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
+    import sys
+
+    experiment_id = sys.argv[1]
+    cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/opc/opc_analysis'
+    create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
 
     # # pilot
     # experiment_ids = [746270939, 746271249, 750534428, 752473496, 755645715,
@@ -47,17 +43,17 @@ if __name__ == '__main__':
     #                 746271665, 750845430, 750846019, 752473630,
     #                 755645219, 756118288, 758305436, 759037671]
     # production
-    experiment_ids = [768898762, 775058863, 775613721, 776727982, 813071318, 816795279,
-                     817251851, 818894752, 826576489, 827232898, 828956958, 829411383,
-                     848005700, 848690810, 848006710, 848691390, 830688102, 832601977,
-                     832617299, 833599179, 830075254, 830688059, 831312165, 832107135,
-                     833614835, 834260382, 838330377, 835642229, 835654507, 836246273,
-                     836891984, 833626456, 836248932, 837630919, 837287590, 827235482,
-                     828959377, 829417358, 831314921, 833612445, 835660148, 836253258,
-                     836906598, 834244626, 836250018, 836895367, 837285285, 833611925,
-                     834251985, 836890936, 837283374]
-
-    cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis'
-    # create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
-    for experiment_id in experiment_ids:
-        create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=False)
+    # experiment_ids = [768898762, 775058863, 775613721, 776727982, 813071318, 816795279,
+    #                  817251851, 818894752, 826576489, 827232898, 828956958, 829411383,
+    #                  848005700, 848690810, 848006710, 848691390, 830688102, 832601977,
+    #                  832617299, 833599179, 830075254, 830688059, 831312165, 832107135,
+    #                  833614835, 834260382, 838330377, 835642229, 835654507, 836246273,
+    #                  836891984, 833626456, 836248932, 837630919, 837287590, 827235482,
+    #                  828959377, 829417358, 831314921, 833612445, 835660148, 836253258,
+    #                  836906598, 834244626, 836250018, 836895367, 837285285, 833611925,
+    #                  834251985, 836890936, 837283374]
+    #
+    # cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis'
+    # # create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
+    # for experiment_id in experiment_ids:
+    #     create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
