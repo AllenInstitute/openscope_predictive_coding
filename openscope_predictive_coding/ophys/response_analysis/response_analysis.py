@@ -161,8 +161,13 @@ class ResponseAnalysis(object):
         return self.oddball_block
 
     def get_oddball_block(self):
-        if (self.overwrite_analysis_files is True) or (
-            'oddball_block.h5' not in os.listdir(os.path.join(self.dataset.analysis_dir))):
+        file_path = os.path.join(self.dataset.analysis_dir, 'oddball_block.h5')
+        if self.overwrite_analysis_files is True:
+            print('overwriting oddball block')
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            self.oddball_block = self.create_oddball_block()
+        elif 'oddball_block.h5' not in os.listdir(os.path.join(self.dataset.analysis_dir)):
             print('creating oddball block')
             self.oddball_block = self.create_oddball_block()
         elif (self.overwrite_analysis_files is False) and (
@@ -218,7 +223,9 @@ class ResponseAnalysis(object):
 
     def get_response_df(self, session_block_name):
         if self.overwrite_analysis_files:
-            print('overwriting analysis files')
+            print('overwriting response dataframe for', session_block_name)
+            if os.path.exists(self.get_response_df_path(session_block_name)):
+                os.remove(self.get_response_df_path(session_block_name))
             response_df = self.generate_response_df(session_block_name)
             self.save_response_df(response_df, session_block_name)
         else:
