@@ -12,6 +12,7 @@ import logging
 
 def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True):
     print('saving ', str(experiment_id), 'to', cache_dir)
+    experiment_id = int(experiment_id)
     dataset = OpenScopePredictiveCodingDataset(experiment_id, cache_dir)
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files)
 
