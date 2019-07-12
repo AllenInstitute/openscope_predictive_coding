@@ -11,7 +11,6 @@ from pbstools import PythonJob # flake8: noqa: E999
 cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/opc/opc_analysis'
 manifest = pd.read_excel(os.path.join(cache_dir, 'opc_production_manifest.xlsx'))
 experiment_ids = manifest['experiment_id'].values
-experiment_ids = [int(experiment_id) for experiment_id in experiment_ids]
 
 python_file = r"/home/marinag/openscope_predictive_coding/scripts/create_analysis_files.py"
 
@@ -29,8 +28,8 @@ for experiment_id in experiment_ids:
     PythonJob(
         python_file,
         python_executable='/home/marinag/anaconda2/envs/openscope_predictive_coding/bin/python',
-        python_args=experiment_id,
+        python_args=int(experiment_id),
         conda_env=None,
-        jobname='process_{}'.format(experiment_id),
+        jobname='process_{}'.format(int(experiment_id)),
         **job_settings
     ).run(dryrun=False)
