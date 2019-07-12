@@ -220,7 +220,7 @@ def get_pkl(lims_data):
         print('moving ', pkl_file, ' to analysis dir')
         shutil.copy2(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
     print('getting stimulus data from pkl')
-    pkl = pd.read_pickle(stimulus_pkl_path)
+    pkl = pd.read_pickle(os.path.join(analysis_dir, pkl_file))
     return pkl
 
 #
