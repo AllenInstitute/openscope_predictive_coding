@@ -27,7 +27,7 @@ for experiment_id in experiment_ids:
     print(experiment_id)
     PythonJob(
         python_file,
-        python_executable='/home/marinag/anaconda2/envs/visual_behavior_ophys/bin/python',
+        python_executable='/home/marinag/anaconda2/envs/openscope_predictive_coding/bin/python',
         python_args=int(experiment_id),
         conda_env=None,
         jobname='process_{}'.format(int(experiment_id)),
