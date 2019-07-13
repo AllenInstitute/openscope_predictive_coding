@@ -25,7 +25,7 @@ class ResponseAnalysis(object):
     If False, will load existing analysis files from dataset.analysis_dir, or generate and save them if none exist.
     """
 
-    def __init__(self, dataset, overwrite_analysis_files=False):
+    def __init__(self, dataset, overwrite_analysis_files=False, preload_response_dfs=True):
         self.dataset = dataset
         self.overwrite_analysis_files = overwrite_analysis_files
         self.sweep_window = [-2, 2]  # time, in seconds, around start time to extract portion of cell trace
@@ -42,7 +42,8 @@ class ResponseAnalysis(object):
         self.get_block_df()
         self.get_oddball_block()
         self.get_image_ids()
-        self.get_response_df_dict()
+        if preload_response_dfs:
+            self.get_response_df_dict()
 
 
     def get_block_df(self):
@@ -167,18 +168,18 @@ class ResponseAnalysis(object):
             if os.path.exists(file_path):
                 os.remove(file_path)
             self.oddball_block = self.create_oddball_block()
-        elif 'oddball_block.h5' not in os.listdir(os.path.join(self.dataset.analysis_dir)):
+        if 'oddball_block.h5' not in os.listdir(os.path.join(self.dataset.analysis_dir)):
             print('creating oddball block')
             self.oddball_block = self.create_oddball_block()
         elif (self.overwrite_analysis_files is False) and (
             'oddball_block.h5' in os.listdir(os.path.join(self.dataset.analysis_dir))):
-            print('loading oddball block')
-            self.oddball_block = pd.read_hdf(os.path.join(self.dataset.analysis_dir, 'oddball_block.h5'), key='df')
+            # print('loading oddball block')
+            self.oddball_sblock = pd.read_hdf(os.path.join(self.dataset.analysis_dir, 'oddball_block.h5'), key='df')
         return self.oddball_block
 
     def generate_response_df(self, session_block_name):
-        print('generating response dataframe for', session_block_name)
         stimulus_block = self.get_stimulus_block(session_block_name)
+        print('generating response dataframe for', session_block_name)
         stimulus_duration = self.get_stimulus_duration(session_block_name)
         sweep_window = [self.sweep_window[0], self.sweep_window[1] + stimulus_duration]
         if 'movie' in session_block_name:
@@ -249,8 +250,11 @@ class ResponseAnalysis(object):
                 df = self.get_response_df(session_block_name)
                 response_df_dict[session_block_name] = df
             else:
-                df = self.get_response_df(session_block_name)
-                response_df_dict[session_block_name] = df
+                try:
+                    df = self.get_response_df(session_block_name)
+                    response_df_dict[session_block_name] = df
+                except:
+                    print('failed to generate response dataframe for', session_block_name)
         self.response_df_dict = response_df_dict
         return self.response_df_dict
 
