@@ -101,11 +101,15 @@ def annotate_mean_df_with_pref_stim(mean_df, flashes=False):
         image_name = 'image_id'
     mdf = mean_df.reset_index()
     mdf['pref_stim'] = False
+    if 'cell_specimen_id' in mdf.keys():
+        cell_label = 'cell_specimen_id'
+    elif 'cell_index' in mdf.keys():
+        cell_label = 'cell_index'
 
-    for cell in mdf.cell_index.unique():
-        mc = mdf[(mdf.cell_index == cell)]
+    for cell in mdf[cell_label].unique():
+        mc = mdf[(mdf[cell_label] == cell)]
         pref_image = mc[(mc.mean_response == np.max(mc.mean_response.values))][image_name].values[0]
-        row = mdf[(mdf.cell_index == cell) & (mdf[image_name] == pref_image)].index
+        row = mdf[(mdf[cell_label] == cell) & (mdf[image_name] == pref_image)].index
         mdf.loc[row, 'pref_stim'] = True
     return mdf
 
@@ -126,7 +130,8 @@ def get_mean_df(response_df, conditions=['cell_index', 'image_id']):
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
     mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace']]
     mdf = mdf.reset_index()
-    mdf = annotate_mean_df_with_pref_stim(mdf)
+    if 'image_id' in mdf.keys():
+        mdf = annotate_mean_df_with_pref_stim(mdf)
 
     fraction_significant_trials = rdf.groupby(conditions).apply(get_fraction_significant_trials)
     fraction_significant_trials = fraction_significant_trials.reset_index()
@@ -137,6 +142,17 @@ def get_mean_df(response_df, conditions=['cell_index', 'image_id']):
     mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
 
     return mdf
+
+
+def add_metadata_to_mean_df(mdf, metadata):
+    metadata = metadata.reset_index()
+    metadata = metadata.rename(columns={'ophys_experiment_id': 'experiment_id'})
+    metadata = metadata.drop(columns=['ophys_frame_rate', 'stimulus_frame_rate', 'index'])
+    metadata['experiment_id'] = [int(experiment_id) for experiment_id in metadata.experiment_id]
+    metadata['session_num'] = metadata.session_type.values[0][-1]
+    mdf = mdf.merge(metadata, how='outer', on='experiment_id')
+    return mdf
+
 
 # def get_gray_response_df(dataset, window=0.5):
 #     window = 0.5
