@@ -185,12 +185,12 @@ def get_metadata(lims_data, timestamps):
     else:
         metadata['reporter_line'] = lims_data['specimen_reporter_line'].values[0].split('(')[0]
     metadata['full_genotype'] = metadata['cre_line'] + ';' + metadata['reporter_line']
-    metadata['session_type'] = 'behavior_session_' + lims_data.session_type.values[0][-1]
+    metadata['session_type'] = lims_data.session_type.values[0]
     metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
     metadata['experiment_date'] = str(lims_data.experiment_date.values[0])[:10]
     metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
     metadata['specimen_id'] = int(lims_data.specimen_id.values[0])
-    # metadata['session_name'] = lims_data.session_name.values[0]
+    metadata['session_name'] = lims_data.session_name.values[0]
     # metadata['session_id'] = int(lims_data.session_id.values[0])
     # metadata['project_id'] = lims_data.project_id.values[0]
     # metadata['rig'] = lims_data.rig.values[0]
