@@ -2,6 +2,7 @@ import os
 import sys
 import platform
 import pandas as pd
+import numpy as np
 if platform.system() == 'Linux':
     # sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/Doug/pbstools')
     sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/nick.ponvert/src/pbstools')
