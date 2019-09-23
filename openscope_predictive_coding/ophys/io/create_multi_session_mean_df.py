@@ -20,6 +20,9 @@ def get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='odd
         try:
             # df = analysis.response_df_dict[session_block_name]
             df = analysis.get_response_df(session_block_name)
+            if session_block_name is 'transition_control':
+                df['second_in_sequence'] = [True if df.iloc[row].stimulus_key[1] == df.iloc[row].image_id else False
+                                             for row in range(0, len(df))]
             mdf = ut.get_mean_df(df, conditions=conditions)
             mdf['experiment_id'] = dataset.experiment_id
             mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
@@ -32,7 +35,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='odd
         mega_mdf = mega_mdf.drop(columns='index')
 
     mega_mdf.to_hdf(os.path.join(cache_dir, 'multi_session_summary_dfs',
-                                 'mean_'+session_block_name+'_'+conditions[2]+'_df.h5'), key='df')
+                                 'mean_'+session_block_name+'_df.h5'), key='df')
 
 
 
@@ -50,8 +53,23 @@ if __name__ == '__main__':
                      836906598, 834244626, 836250018, 836895367, 837285285, 833611925,
                      834251985, 836890936, 837283374]
 
-    get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name = 'oddball',
-                              conditions=['cell_specimen_id', 'image_id', 'oddball'])
+    # get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name = 'oddball',
+    #                           conditions=['cell_specimen_id', 'image_id', 'oddball'])
+    # # #
+    # get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='occlusion',
+    #                           conditions=['cell_specimen_id', 'image_id', 'fraction_occlusion'])
 
-    get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='occlusion',
-                              conditions=['cell_specimen_id', 'image_id', 'fraction_occlusion'])
+    get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='transition_control',
+                              conditions=['cell_specimen_id', 'image_id', 'second_in_sequence'])
+    #
+    # get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='randomized_control_pre',
+    #                           conditions=['cell_specimen_id', 'image_id', 'oddball'])
+
+    # #
+    # get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='randomized_control_pre',
+    #                               conditions=['cell_specimen_id', 'image_id', 'oddball'])
+    # #
+
+    # get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='natural_movie_one',
+    #                               conditions=['cell_specimen_id'])
+

@@ -52,10 +52,10 @@ def ptest(x, num_conditions):
 
 
 def get_mean_sem_trace(group):
-    mean_response = np.nanmean(group['mean_response'])
+    mean_response = np.mean(group['mean_response'])
     sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
-    mean_trace = np.nanmean(group['trace'])
-    sem_trace = np.std(group['trace'].values) / np.sqrt(len(group['trace'].values))
+    mean_trace = np.mean(group['dff_trace'])
+    sem_trace = np.std(group['dff_trace'].values) / np.sqrt(len(group['dff_trace'].values))
     return pd.Series({'mean_response': mean_response, 'sem_response': sem_response,
                       'mean_trace': mean_trace, 'sem_trace': sem_trace})
 
@@ -63,13 +63,13 @@ def get_mean_sem_trace(group):
 def annotate_trial_response_df_with_pref_stim(trial_response_df):
     rdf = trial_response_df.copy()
     rdf['pref_stim'] = False
-    mean_response = rdf.groupby(['cell_index', 'image_id']).apply(get_mean_sem_trace)
+    mean_response = rdf.groupby(['cell_specimen_id', 'image_id']).apply(get_mean_sem_trace)
     m = mean_response.unstack()
-    for cell in m.cell_index.values:
-        cdf = m[m.cell_index==cell]
+    for cell in m.cell_specimen_id.values:
+        cdf = m[m.cell_specimen_id==cell]
         image_index = np.where(cdf['mean_response'].values == np.max(cdf['mean_response'].values))[0][0]
         pref_image = cdf['mean_response'].index[image_index]
-        trials = rdf[(rdf.cell_index == cell) & (rdf.image_id == pref_image)].index
+        trials = rdf[(rdf.cell_specimen_id == cell) & (rdf.image_id == pref_image)].index
         for trial in trials:
             rdf.loc[trial, 'pref_stim'] = True
     return rdf
@@ -124,7 +124,7 @@ def get_fraction_responsive_trials(group):
     return pd.Series({'fraction_responsive_trials': fraction_responsive_trials})
 
 
-def get_mean_df(response_df, conditions=['cell_index', 'image_id']):
+def get_mean_df(response_df, conditions=['cell_specimen_id', 'image_id']):
     rdf = response_df.copy()
 
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)

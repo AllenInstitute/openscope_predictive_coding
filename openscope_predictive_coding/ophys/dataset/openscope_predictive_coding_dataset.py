@@ -108,6 +108,7 @@ class OpenScopePredictiveCodingDataset(object):
 
     def get_stimulus_table(self):
         self._stimulus_table = pd.read_hdf(os.path.join(self.analysis_dir, 'stimulus_table.h5'), key='df')
+        self._stimulus_table.index.name = 'stimulus_presentations_id'
         return self._stimulus_table
     stimulus_table = LazyLoadable('_stimulus_table', get_stimulus_table)
 
@@ -139,12 +140,22 @@ class OpenScopePredictiveCodingDataset(object):
 
     def get_dff_traces(self):
         with h5py.File(os.path.join(self.analysis_dir, 'dff_traces.h5'), 'r') as dff_traces_file:
+            dff_traces = pd.DataFrame(columns=['dff'], index = dff_traces_file.keys())
+            for key in dff_traces_file.keys():
+                dff_traces.at[key, 'dff'] = np.asarray(dff_traces_file[key])
+        self._dff_traces = dff_traces
+        return self._dff_traces
+    dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
+
+
+    def get_dff_traces_array(self):
+        with h5py.File(os.path.join(self.analysis_dir, 'dff_traces.h5'), 'r') as dff_traces_file:
             dff_traces = []
             for key in dff_traces_file.keys():
                 dff_traces.append(np.asarray(dff_traces_file[key]))
-        self._dff_traces = np.asarray(dff_traces)
-        return self._dff_traces
-    dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
+        self._dff_traces_array = np.asarray(dff_traces)
+        return self._dff_traces_array
+    dff_traces_array = LazyLoadable('_dff_traces_array', get_dff_traces_array)
 
     def get_corrected_fluorescence_traces(self):
         with h5py.File(os.path.join(self.analysis_dir, 'corrected_fluorescence_traces.h5'), 'r') as corrected_fluorescence_traces_file:
@@ -195,10 +206,16 @@ class OpenScopePredictiveCodingDataset(object):
         return self._max_projection
     max_projection = LazyLoadable('_max_projection', get_max_projection)
 
+    def get_average_image(self):
+        with h5py.File(os.path.join(self.analysis_dir, 'average_image.h5'), 'r') as average_image_file:
+            self._average_image = np.asarray(average_image_file['data'])
+        return self._average_image
+    average_image = LazyLoadable('_average_image', get_average_image)
+
     def get_red_channel_image(self):
         import tifffile
         # from PIL import Image
-        red_image_file = [file for file in os.listdir(self.analysis_dir) if 'red' in file and 'metrics' not in file]
+        red_image_file = [file for file in os.listdir(self.analysis_dir) if 'red' in file and '.tif' in file]
         if len(red_image_file) > 0:
             red_image_file_path = os.path.join(self.analysis_dir, red_image_file[0])
             self._red_channel_image = tifffile.imread(red_image_file_path)
@@ -258,6 +275,7 @@ class OpenScopePredictiveCodingDataset(object):
         # obj.get_stimulus_metadata()
         # obj.get_running_speed()
         obj.get_dff_traces()
+        obj.get_dff_traces_array()
         obj.get_corrected_fluorescence_traces()
         obj.get_neuropil_traces()
         obj.get_roi_metrics()
@@ -266,6 +284,7 @@ class OpenScopePredictiveCodingDataset(object):
         obj.get_cell_specimen_ids()
         obj.get_cell_indices()
         obj.get_max_projection()
+        obj.get_average_image()
         obj.get_red_channel_image()
         obj.get_motion_correction()
 

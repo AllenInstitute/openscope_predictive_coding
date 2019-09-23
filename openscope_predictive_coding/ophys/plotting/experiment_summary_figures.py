@@ -74,7 +74,7 @@ def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
     fig.set_size_inches(figsize)
     filename = os.path.join(fig_dir, fig_title)
     for f in formats:
-        fig.savefig(filename + f, transparent=True, orientation='landscape')
+        fig.savefig(filename + f, transparent=True, orientation='landscape', bbox_inches='tight')
 
 def plot_traces_heatmap(dff_traces, ax=None, save_dir=None):
     if ax is None:
@@ -99,14 +99,14 @@ def plot_mean_image_response_heatmap(analysis, mean_df, title=None, ax=None, sav
     for image in images:
         tmp = df[(df.image_id == image) & (df.pref_stim == True)]
         order = np.argsort(tmp.mean_response.values)[::-1]
-        cell_ids = list(tmp.cell_index.values[order])
+        cell_ids = list(tmp.cell_specimen_id.values[order])
         cell_list = cell_list + cell_ids
 
     response_matrix = np.empty((len(cell_list), len(images)))
     for i, cell in enumerate(cell_list):
         responses = []
         for image in images:
-            response = df[(df.cell_index == cell) & (df.image_id == image)].mean_response.values[0]
+            response = df[(df.cell_specimen_id == cell) & (df.image_id == image)].mean_response.values[0]
             responses.append(response)
         response_matrix[i, :] = np.asarray(responses)
 
@@ -204,7 +204,7 @@ def plot_mean_trace_with_stimulus_blocks(analysis, ax=None, save=False):
         figsize=(20,5)
         fig, ax = plt.subplots(figsize=figsize)
 
-    ax.plot(dataset.timestamps_ophys, np.nanmean(dataset.dff_traces,axis=0))
+    ax.plot(dataset.timestamps_ophys, np.nanmean(dataset.dff_traces_array,axis=0))
     ax.set_xlabel('time (seconds)')
     ax.set_ylabel('dF/F')
     ax.set_title('population average')
@@ -257,13 +257,13 @@ def plot_mean_cell_trace_with_oddballs(analysis, ax=None, save=False):
         figsize=(20,5)
         fig, ax = plt.subplots(figsize=figsize)
 
-    ax.plot(dataset.timestamps_ophys, np.nanmean(dataset.dff_traces,axis=0))
+    ax.plot(dataset.timestamps_ophys, np.nanmean(dataset.dff_traces_array,axis=0))
     ax.set_xlabel('time (seconds)')
     ax.set_ylabel('dF/F')
     ax.set_title('population average with oddball stimuli')
     ax.set_xlim(200, 2400)
 
-    indices = odf[(odf.cell_index==0)&(odf.oddball==True)].index
+    indices = odf[(odf.cell_specimen_id==odf.cell_specimen_id.unique()[0])&(odf.oddball==True)].index
     for i, oddball_index in enumerate(indices):
         start_time = odf.iloc[oddball_index].start_time
         end_time = odf.iloc[oddball_index].end_time +3
@@ -292,7 +292,7 @@ def plot_mean_neuropil_trace_with_oddballs(analysis, ax=None, save=False):
     ax.set_title('neuropil mask population average with oddball stimuli')
     ax.set_xlim(200, 2400)
 
-    indices = odf[(odf.cell_index==0)&(odf.oddball==True)].index
+    indices = odf[(odf.cell_specimen_id==0)&(odf.oddball==True)].index
     for i, oddball_index in enumerate(indices):
         start_time = odf.iloc[oddball_index].start_time
         end_time = odf.iloc[oddball_index].end_time +3
@@ -317,11 +317,11 @@ def plot_mean_sequence_violation(analysis, ax=None, save=False):
         figsize = (8, 5)
         fig, ax = plt.subplots(figsize=figsize)
 
-    traces = oddball_df[oddball_df.image_id == analysis.get_sequence_images()[3]].trace.values
+    traces = oddball_df[oddball_df.image_id == analysis.get_sequence_images()[3]].dff_trace.values
     ax = sf.plot_mean_trace(traces, ophys_frame_rate, color='b', interval_sec=0.5, ax=ax,
                             legend_label='expected')
 
-    traces = oddball_df[oddball_df.oddball == True].trace.values
+    traces = oddball_df[oddball_df.oddball == True].dff_trace.values
     ax = sf.plot_mean_trace(traces, ophys_frame_rate, color='r', interval_sec=0.5, ax=ax,
                             legend_label='unexpected')
 
@@ -357,11 +357,11 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     ax.set_title(analysis.dataset.experiment_id)
     ax.axis('off')
 
-    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(analysis.dataset.dff_traces,
+    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(analysis.dataset.dff_traces_array,
                                                                                analysis.dataset.timestamps_ophys)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.2, 0.88), yspan=(0, .3))
-    ax = plot_traces_heatmap(analysis.dataset.dff_traces, ax=ax)
+    ax = plot_traces_heatmap(analysis.dataset.dff_traces_array, ax=ax)
     ax.set_xticks(np.arange(0, upper_limit, interval_seconds * ophys_frame_rate))
     ax.set_xticklabels(np.arange(0, upper_limit / ophys_frame_rate, interval_seconds))
     ax.set_xlabel('time (seconds)')
@@ -468,6 +468,7 @@ def plot_mean_response_across_image_block_sets(data, analysis_folder, save_dir=N
     sm.set_array([])
     cbar = ax.figure.colorbar(mappable=sm, ax=ax, label='first/last ratio')
     ax.set_title('mean response across image blocks\ncolored by ratio of first to last block')
+    fig.tight_layout()
     if save_dir:
         fig.tight_layout()
         save_figure(fig,figsize,save_dir,'first_flash_by_image_block_set',analysis_folder)
