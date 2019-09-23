@@ -21,8 +21,8 @@ python_file = r"/home/marinag/openscope_predictive_coding/scripts/create_analysi
 jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords_opc'
 
 job_settings = {'queue': 'braintv',
-                'mem': '80g',
-                'walltime': '20:00:00',
+                'mem': '60g',
+                'walltime': '10:00:00',
                 'ppn': 1,
                 'jobdir': jobdir,
                 }

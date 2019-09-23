@@ -16,7 +16,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='odd
     for experiment_id in experiment_ids:
         print(experiment_id)
         dataset = OpenScopePredictiveCodingDataset(experiment_id, cache_dir=cache_dir)
-        analysis = ResponseAnalysis(dataset, preload_response_dfs=False)
+        analysis = ResponseAnalysis(dataset, preload_response_dfs=False, overwrite_analysis_files=False)
         try:
             # df = analysis.response_df_dict[session_block_name]
             df = analysis.get_response_df(session_block_name)
@@ -41,35 +41,27 @@ def get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='odd
 
 if __name__ == '__main__':
     cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis'
-    # manifest = pd.read_csv(os.path.join(cache_dir, 'visual_behavior_data_manifest.csv'))
-    # experiment_ids = manifest.experiment_id.values
-    experiment_ids = [768898762, 775058863, 775613721, 776727982, 813071318, 816795279,
-                     817251851, 818894752, 826576489, 827232898, 828956958, 829411383,
-                     848005700, 848690810, 848006710, 848691390, 830688102, 832601977,
-                     832617299, 833599179, 830075254, 830688059, 831312165, 832107135,
-                     833614835, 834260382, 838330377, 835642229, 835654507, 836246273,
-                     836891984, 833626456, 836248932, 837630919, 837287590, 827235482,
-                     828959377, 829417358, 831314921, 833612445, 835660148, 836253258,
-                     836906598, 834244626, 836250018, 836895367, 837285285, 833611925,
-                     834251985, 836890936, 837283374]
+    manifest_file = r"\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis\opc_production_manifest.xlsx"
+    data = pd.read_excel(manifest_file)
+    data = data[data['experiment_state'] == 'passed']
+    experiment_ids = data.experiment_id.unique()
+    experiment_ids = np.asarray([int(expt_id) for expt_id in experiment_ids])
 
-    # get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name = 'oddball',
-    #                           conditions=['cell_specimen_id', 'image_id', 'oddball'])
-    # # #
-    # get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='occlusion',
-    #                           conditions=['cell_specimen_id', 'image_id', 'fraction_occlusion'])
+    get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name = 'oddball',
+                              conditions=['cell_specimen_id', 'image_id', 'oddball'])
+
+    get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='occlusion',
+                              conditions=['cell_specimen_id', 'image_id', 'fraction_occlusion'])
 
     get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='transition_control',
                               conditions=['cell_specimen_id', 'image_id', 'second_in_sequence'])
-    #
-    # get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='randomized_control_pre',
-    #                           conditions=['cell_specimen_id', 'image_id', 'oddball'])
 
-    # #
-    # get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='randomized_control_pre',
-    #                               conditions=['cell_specimen_id', 'image_id', 'oddball'])
-    # #
+    get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='randomized_control_pre',
+                              conditions=['cell_specimen_id', 'image_id', 'oddball'])
 
-    # get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='natural_movie_one',
-    #                               conditions=['cell_specimen_id'])
+    get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='randomized_control_pre',
+                                  conditions=['cell_specimen_id', 'image_id', 'oddball'])
+
+    get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='natural_movie_one',
+                                  conditions=['cell_specimen_id'])
 
