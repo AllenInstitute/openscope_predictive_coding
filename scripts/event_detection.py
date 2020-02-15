@@ -11,7 +11,7 @@ from visual_coding_2p_analysis.l0_analysis import L0_analysis
 
 
 def event_detection(lims_id, cache_dir, events_dir, plot=True):
-    dataset = VisualBehaviorOphysDataset(lims_id, cache_dir=cache_dir)
+    dataset = OpenScopePredictiveCodingDataset(lims_id, cache_dir=cache_dir)
     print('using Ai93 halflife')
     genotype = 'Ai93'
     dataset.metadata['genotype'] = genotype
