@@ -160,10 +160,10 @@ class OpenScopePredictiveCodingDataset(object):
     dff_traces_array = LazyLoadable('_dff_traces_array', get_dff_traces_array)
 
     def get_corrected_fluorescence_traces(self):
-        with h5py.File(os.path.join(self.analysis_dir, 'corrected_fluorescence_traces.h5'), 'r') as corrected_fluorescence_traces_file:
-            corrected_fluorescence_traces = []
-            for key in corrected_fluorescence_traces_file.keys():
-                corrected_fluorescence_traces.append(np.asarray(corrected_fluorescence_traces[key]))
+        data = h5py.File(os.path.join(self.analysis_dir, 'corrected_fluorescence_traces.h5'), 'r')
+        corrected_fluorescence_traces = []
+        for key in data.keys():
+            corrected_fluorescence_traces.append(np.asarray(data[key]))
         self._corrected_fluorescence_traces = np.asarray(corrected_fluorescence_traces)
         return self._corrected_fluorescence_traces
     corrected_fluorescence_traces = LazyLoadable('_corrected_fluorescence_traces', get_corrected_fluorescence_traces)
