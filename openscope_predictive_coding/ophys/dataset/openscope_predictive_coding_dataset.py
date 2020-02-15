@@ -87,7 +87,10 @@ class OpenScopePredictiveCodingDataset(object):
     analysis_dir = LazyLoadable('_analysis_dir', get_analysis_dir)
 
     def get_metadata(self):
-        self._metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df')
+        metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df')
+        metadata['depth'] = ['deep' if depth > 250 else 'superficial' for depth in metadata.imaging_depth.values]
+        metadata['location'] = metadata.targeted_structure + '_' + metadata.depth
+        self._metadata = metadata
         return self._metadata
     metadata = LazyLoadable('_metadata', get_metadata)
 
@@ -147,7 +150,6 @@ class OpenScopePredictiveCodingDataset(object):
         return self._dff_traces
     dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
 
-
     def get_dff_traces_array(self):
         with h5py.File(os.path.join(self.analysis_dir, 'dff_traces.h5'), 'r') as dff_traces_file:
             dff_traces = []
@@ -174,6 +176,38 @@ class OpenScopePredictiveCodingDataset(object):
         self._neuropil_traces = np.asarray(neuropil_traces)
         return self._neuropil_traces
     neuropil_traces = LazyLoadable('_neuropilf_traces', get_neuropil_traces)
+
+    def get_events_array(self):
+        events_folder = os.path.join(self.cache_dir, 'events')
+        if os.path.exists(events_folder):
+            events_file = [file for file in os.listdir(events_folder) if str(self.experiment_id) + '_events.npz' in file]
+            if len(events_file) > 0:
+                print('getting L0 events')
+                f = np.load(os.path.join(events_folder, events_file[0]))
+                events = np.asarray(f['ev'])
+                ## put smoothing here? ##
+                f.close()
+                if events.shape[1] > self.timestamps_ophys.shape[0]:
+                    difference = self.timestamps_ophys.shape[0] - events.shape[1]
+                    print('length of ophys timestamps <  length of events by', str(difference),
+                                'frames , truncating events')
+                    events = events[:, :self.timestamps_ophys.shape[0]]
+            else:
+                print('no events for this experiment')
+                events = None
+        else:
+            print('no events for this experiment')
+            events = None
+        self._events_array = events
+        return self._events_array
+
+    events_array = LazyLoadable('_events_array', get_events_array)
+
+    def get_events(self):
+        self._events = pd.DataFrame({'events': [x for x in self.events_array]}, index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
+        return self._events
+    events = LazyLoadable('_events', get_events)
+
 
     def get_roi_metrics(self):
         self._roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df')
@@ -276,6 +310,8 @@ class OpenScopePredictiveCodingDataset(object):
         # obj.get_running_speed()
         obj.get_dff_traces()
         obj.get_dff_traces_array()
+        obj.get_events_array()
+        obj.get_events()
         obj.get_corrected_fluorescence_traces()
         obj.get_neuropil_traces()
         obj.get_roi_metrics()

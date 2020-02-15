@@ -11,12 +11,12 @@ import os
 
 def get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='oddball',
                               conditions=['cell_specimen_id', 'image_id', 'oddball'],
-                              flashes=False, use_events=False):
+                              flashes=False, use_events=True):
     mega_mdf = pd.DataFrame()
     for experiment_id in experiment_ids:
         print(experiment_id)
         dataset = OpenScopePredictiveCodingDataset(experiment_id, cache_dir=cache_dir)
-        analysis = ResponseAnalysis(dataset, preload_response_dfs=False, overwrite_analysis_files=False)
+        analysis = ResponseAnalysis(dataset, preload_response_dfs=False, overwrite_analysis_files=False, use_events=use_events)
         try:
             # df = analysis.response_df_dict[session_block_name]
             df = analysis.get_response_df(session_block_name)
@@ -29,13 +29,17 @@ def get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='odd
             mega_mdf = pd.concat([mega_mdf, mdf])
         except:
             print('problem for',experiment_id)
+    if use_events:
+        suffix = '_events'
+    else:
+        suffix = ''
     if 'level_0' in mega_mdf.keys():
         mega_mdf = mega_mdf.drop(columns='level_0')
     if 'index' in mega_mdf.keys():
         mega_mdf = mega_mdf.drop(columns='index')
 
     mega_mdf.to_hdf(os.path.join(cache_dir, 'multi_session_summary_dfs',
-                                 'mean_'+session_block_name+'_df.h5'), key='df')
+                                 'mean_'+session_block_name+'_df'+suffix+'.h5'), key='df')
 
 
 

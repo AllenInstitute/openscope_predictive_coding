@@ -125,6 +125,15 @@ def get_spontaneous_frames(analysis):
 
     return spontaneous_frames
 
+def filter_events_array(trace_arr, scale=2):
+    from scipy import stats
+    filt = stats.halfnorm(loc=0, scale=scale).pdf(np.arange(20))
+    filtered_arr = np.empty(trace_arr.shape)
+    for ind_cell in range(trace_arr.shape[0]):
+        this_trace = trace_arr[ind_cell, :]
+        this_trace_filtered = np.convolve(this_trace, filt)[:len(this_trace)]
+        filtered_arr[ind_cell, :] = this_trace_filtered
+    return filtered_arr
 
 def get_p_value_from_shuffled_spontaneous(analysis,
                                           mean_responses,
@@ -169,13 +178,17 @@ def get_p_value_from_shuffled_spontaneous(analysis,
     return result
 
 
-def stimulus_response_xr(analysis, stimulus_block, response_analysis_params=None):
+def stimulus_response_xr(analysis, stimulus_block, response_analysis_params=None, use_events=False):
     dataset = analysis.dataset
-
     if response_analysis_params is None:
         response_analysis_params = get_default_stimulus_response_params()
 
-    dff_traces_arr = dataset.dff_traces_array
+    # dff_traces_arr = dataset.dff_traces_array
+    if use_events:
+        traces = np.stack(dataset.events['events'].values)
+        traces = filter_events_array(traces, scale=2)
+    else:
+        traces = np.stack(dataset.dff_traces['dff'].values)
 
     event_times = stimulus_block['start_time'].values
     event_indices = index_of_nearest_value(dataset.timestamps_ophys, event_times)
@@ -185,7 +198,7 @@ def stimulus_response_xr(analysis, stimulus_block, response_analysis_params=None
         event_times=event_times,
         window_around_timepoint_seconds=response_analysis_params['window_around_timepoint_seconds']
     )
-    sliced_dataout = eventlocked_traces(dff_traces_arr, event_indices, start_ind_offset, end_ind_offset)
+    sliced_dataout = eventlocked_traces(traces, event_indices, start_ind_offset, end_ind_offset)
 
     eventlocked_traces_xr = xr.DataArray(
         data=sliced_dataout,
@@ -210,7 +223,7 @@ def stimulus_response_xr(analysis, stimulus_block, response_analysis_params=None
 
     p_values = get_p_value_from_shuffled_spontaneous(analysis,
                                                      mean_response,
-                                                     dff_traces_arr,
+                                                     traces,
                                                      response_analysis_params['response_window_duration_seconds'])
     result = xr.Dataset({
         'eventlocked_traces': eventlocked_traces_xr,

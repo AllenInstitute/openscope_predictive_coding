@@ -16,23 +16,23 @@ if __name__ == '__main__':
     experiment_ids = data.experiment_id.unique()
     experiment_ids = [int(expt_id) for expt_id in experiment_ids]
 
-    # get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='oddball',
-    #                           conditions=['cell_specimen_id', 'image_id', 'oddball'])
-    #
-    # get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='occlusion',
-    #                           conditions=['cell_specimen_id', 'image_id', 'fraction_occlusion'])
-    #
-    # get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='transition_control',
-    #                           conditions=['cell_specimen_id', 'image_id', 'second_in_sequence'])
+    get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='oddball',
+                              conditions=['cell_specimen_id', 'image_id', 'oddball'], use_events=True)
+
+    get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='occlusion',
+                              conditions=['cell_specimen_id', 'image_id', 'fraction_occlusion'], use_events=True)
+
+    get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='transition_control',
+                              conditions=['cell_specimen_id', 'image_id', 'second_in_sequence'], use_events=True)
 
     get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='randomized_control_pre',
-                              conditions=['cell_specimen_id', 'image_id', 'oddball'])
+                              conditions=['cell_specimen_id', 'image_id', 'oddball'], use_events=True)
 
     get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='randomized_control_pre',
-                              conditions=['cell_specimen_id', 'image_id', 'oddball'])
+                              conditions=['cell_specimen_id', 'image_id', 'oddball'], use_events=True)
 
     get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='natural_movie_one',
-                              conditions=['cell_specimen_id'])
+                              conditions=['cell_specimen_id'], use_events=True)
 
 
 

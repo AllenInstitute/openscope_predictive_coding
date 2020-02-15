@@ -26,10 +26,11 @@ class ResponseAnalysis(object):
     If False, will load existing analysis files from dataset.analysis_dir, or generate and save them if none exist.
     """
 
-    def __init__(self, dataset, overwrite_analysis_files=False, preload_response_dfs=False):
+    def __init__(self, dataset, overwrite_analysis_files=False, preload_response_dfs=False, use_events=False):
         self.dataset = dataset
         self.overwrite_analysis_files = overwrite_analysis_files
         self.preload_response_dfs = preload_response_dfs
+        self.use_events = use_events
         self.sweep_window = [-2, 2]  # time, in seconds, around start time to extract portion of cell trace
         self.response_window_duration = 0.5  # window, in seconds, over which to take the mean for a given stimulus sweep
         self.response_window = [np.abs(self.sweep_window[0]), np.abs(self.sweep_window[0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
@@ -154,7 +155,7 @@ class ResponseAnalysis(object):
     def generate_response_df(self, session_block_name):
         stimulus_block = self.get_stimulus_block(session_block_name)
         print('generating response dataframe for', session_block_name)
-        response_xr = rp.stimulus_response_xr(self, stimulus_block, response_analysis_params=None)
+        response_xr = rp.stimulus_response_xr(self, stimulus_block, response_analysis_params=None, use_events=self.use_events)
         response_df = rp.stimulus_response_df(response_xr)
         return response_df
 
@@ -186,6 +187,10 @@ class ResponseAnalysis(object):
             response_df = self.generate_response_df(session_block_name)
         stimulus_block = self.get_stimulus_block(session_block_name)
         response_df = response_df.merge(stimulus_block, on='stimulus_presentations_id')
+        if session_block_name == 'transition_control':
+            response_df['second_in_sequence'] = [
+                True if response_df.iloc[row].stimulus_key[1] == response_df.iloc[row].image_id else False
+                for row in range(0, len(response_df))]
         return response_df
 
     def get_response_df_dict(self):
