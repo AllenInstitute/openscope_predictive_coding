@@ -13,7 +13,7 @@ if __name__ == '__main__':
     manifest_file = r"/allen/programs/braintv/workgroups/nc-ophys/opc/opc_analysis/opc_production_manifest.xlsx"
     data = pd.read_excel(manifest_file)
     data = data[data['experiment_state'] == 'passed']
-    experiment_ids = data.experiment_id.unique()
+    experiment_ids = np.sort(data.experiment_id.unique())
     experiment_ids = [int(expt_id) for expt_id in experiment_ids]
 
     get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='oddball',
