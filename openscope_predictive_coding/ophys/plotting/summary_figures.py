@@ -192,7 +192,7 @@ def get_xticks_xticklabels(trace, frame_rate, interval_sec=1, window=[-2,2]):
     interval_frames = interval_sec * frame_rate
     n_frames = len(trace)
     n_sec = n_frames / frame_rate
-    xticks = np.arange(0, n_frames + 1, interval_frames)
+    xticks = np.arange(0, n_frames + 5, interval_frames)
     xticklabels = np.arange(0, n_sec + 0.1, interval_sec)
     xticklabels = xticklabels + window[0]
     if interval_sec >= 1:
@@ -241,25 +241,25 @@ def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color=
     return ax
 
 
-def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color='k', interval_sec=0.5, xlims=[-2,2], ax=None):
-    xlims = [xlims[0] + np.abs(xlims[1]), xlims[1] + xlims[1]]
-    if ax is None:
-        fig, ax = plt.subplots()
-    if len(traces) > 0:
-        trace = np.mean(traces, axis=0)
-        times = np.arange(0, len(trace), 1)
-        sem = (np.std(traces)) / np.sqrt(float(len(traces)))
-
-        ax.plot(trace, label=legend_label, linewidth=3, color=color)
-        ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
-        xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec)
-        ax.set_xticks([np.round(x,2) for x in xticks])
-        ax.set_xticklabels([np.round(x,1) for x in xticklabels])
-        ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
-        ax.set_xlabel('time (sec)')
-        ax.set_ylabel(ylabel)
-    sns.despine(ax=ax)
-    return ax
+# def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color='k', interval_sec=0.5, xlims=[-2,2], ax=None):
+#     xlims = [xlims[0] + np.abs(xlims[1]), xlims[1] + xlims[1]]
+#     if ax is None:
+#         fig, ax = plt.subplots()
+#     if len(traces) > 0:
+#         trace = np.mean(traces, axis=0)
+#         times = np.arange(0, len(trace), 1)
+#         sem = (np.std(traces)) / np.sqrt(float(len(traces)))
+#
+#         ax.plot(trace, label=legend_label, linewidth=3, color=color)
+#         ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
+#         xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec)
+#         ax.set_xticks([np.round(x,2) for x in xticks])
+#         ax.set_xticklabels([np.round(x,1) for x in xticklabels])
+#         ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
+#         ax.set_xlabel('time (sec)')
+#         ax.set_ylabel(ylabel)
+#     sns.despine(ax=ax)
+#     return ax
 
 
 # def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color='k', interval_sec=0.5, xlims=[-1, 2],
@@ -297,6 +297,26 @@ def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color=
 #     sns.despine(ax=ax)
 #     return ax
 
+def plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=None, color='k', interval_sec=1,
+                                     xlims=[-4, 4], ax=None):
+#     xlim = [xlims[0] + np.abs(xlims[0]), xlims[1] + np.abs(xlims[0])]
+    if ax is None:
+        fig, ax = plt.subplots()
+    if len(traces) > 0:
+        mean_trace = np.mean(traces, axis=0)
+        times = np.arange(0, len(mean_trace), 1)
+        sem = (traces.std()) / np.sqrt(float(len(traces)))
+        for trace in traces:
+            ax.plot(trace, linewidth=1, color='gray')
+        ax.plot(mean_trace, label=label, linewidth=3, color=color, zorder=100)
+        xticks, xticklabels = get_xticks_xticklabels(mean_trace, frame_rate, interval_sec, window=xlims)
+        ax.set_xticks(xticks)
+        ax.set_xticklabels([int(x) for x in xticklabels])
+        ax.set_xlim(0,(np.abs(xlims[0])+xlims[1]) * int(frame_rate))
+        ax.set_xlabel('time (sec)')
+        ax.set_ylabel(ylabel)
+        sns.despine(ax=ax)
+    return ax
 
 def plot_flashes_on_trace(ax, analysis, duration=0.25, alpha=0.15):
     """
@@ -578,6 +598,25 @@ def plot_randomized_control_responses(analysis, cell_specimen_id, ax=None, save=
         save_figure(fig,figsize,analysis.dataset.analysis_dir,'randomized_control','cell_'+str(cell_specimen_id))
         plt.close()
     return ax
+
+
+def plot_event_detection(dff_traces_array, events, analysis_dir):
+    figsize = (20, 15)
+    xlims_list = [[0, dff_traces_array[0].shape[0]], [10000, 12000], [60000, 62000]]
+    for cell in range(len(dff_traces_array)):
+        fig, ax = plt.subplots(3, 1, figsize=figsize)
+        ax = ax.ravel()
+        for i, xlims in enumerate(xlims_list):
+            ax[i].plot(dff_traces_array[cell], label='dF/F from L0')
+            ax[i].plot(events[cell], color='r', label='events')
+            ax[i].set_title('roi ' + str(cell))
+            ax[i].set_xlabel('2P frames')
+            ax[i].set_ylabel('dF/F')
+            ax[i].set_xlim(xlims)
+        plt.legend()
+        fig.tight_layout()
+        save_figure(fig, figsize, analysis_dir, 'event_detection', str(cell))
+        plt.close()
 
 
 def plot_trace_with_stimulus_blocks(analysis, cell_index, ax=None, save=False):
