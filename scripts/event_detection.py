@@ -6,7 +6,7 @@ matplotlib.use('Agg')
 import numpy as np
 
 from openscope_predictive_coding.ophys.dataset.openscope_predictive_coding_dataset import OpenScopePredictiveCodingDataset
-from openscope_predictive_coding.plotting import summary_figures as sf
+from openscope_predictive_coding.ophys.plotting import summary_figures as sf
 from visual_coding_2p_analysis.l0_analysis import L0_analysis
 
 
