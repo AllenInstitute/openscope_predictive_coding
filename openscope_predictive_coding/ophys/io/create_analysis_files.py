@@ -10,12 +10,13 @@ import openscope_predictive_coding.ophys.plotting.experiment_summary_figures as 
 import logging
 
 
-def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True, preload_response_dfs=False):
+def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True, preload_response_dfs=False, use_events=False):
     print('saving ', str(experiment_id), 'to', cache_dir)
     experiment_id = int(experiment_id)
     dataset = OpenScopePredictiveCodingDataset(experiment_id, cache_dir)
-    analysis = ResponseAnalysis(dataset, overwrite_analysis_files, preload_response_dfs)
-    response_dict = analysis.get_response_df_dict()
+    analysis = ResponseAnalysis(dataset, overwrite_analysis_files=overwrite_analysis_files,
+                                preload_response_dfs=preload_response_dfs, use_events=use_events)
+    # response_dict = analysis.get_response_df_dict()
 
     print('plotting experiment summary figure')
     esf.plot_experiment_summary_figure(analysis, save_dir = dataset.analysis_dir)
@@ -26,14 +27,17 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
 
 
 if __name__ == '__main__':
-    # import sys
-    # experiment_id = sys.argv[1]
-    manifest_file = r"\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis\opc_production_manifest.xlsx"
-    data = pd.read_excel(manifest_file)
-    data = data[data['experiment_state'] == 'passed']
-    experiment_ids = data.experiment_id.unique()
-    experiment_ids = np.asarray([int(expt_id) for expt_id in experiment_ids])
+    import sys
+    experiment_id = sys.argv[1]
+    cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/opc/opc_analysis'
+    create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True, preload_response_dfs=True, use_events=True)
 
-    cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis'
-    for experiment_id in experiment_ids:
-        create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True, preload_response_dfs=False)
+    # manifest_file = r"\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis\opc_production_manifest.xlsx"
+    # data = pd.read_excel(manifest_file)
+    # data = data[data['experiment_state'] == 'passed']
+    # experiment_ids = data.experiment_id.unique()
+    # experiment_ids = np.asarray([int(expt_id) for expt_id in experiment_ids])
+    #
+    # cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis'
+    # for experiment_id in experiment_ids:
+    #     create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True, preload_response_dfs=False)

@@ -31,6 +31,10 @@ class ResponseAnalysis(object):
         self.overwrite_analysis_files = overwrite_analysis_files
         self.preload_response_dfs = preload_response_dfs
         self.use_events = use_events
+        if self.use_events:
+            self.suffix = '_events'
+        else:
+            self.suffix = ''
         self.sweep_window = [-2, 2]  # time, in seconds, around start time to extract portion of cell trace
         self.response_window_duration = 0.5  # window, in seconds, over which to take the mean for a given stimulus sweep
         self.response_window = [np.abs(self.sweep_window[0]), np.abs(self.sweep_window[0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
@@ -154,13 +158,13 @@ class ResponseAnalysis(object):
 
     def generate_response_df(self, session_block_name):
         stimulus_block = self.get_stimulus_block(session_block_name)
-        print('generating response dataframe for', session_block_name)
+        print('generating response dataframe for', session_block_name, self.suffix)
         response_xr = rp.stimulus_response_xr(self, stimulus_block, response_analysis_params=None, use_events=self.use_events)
         response_df = rp.stimulus_response_df(response_xr)
         return response_df
 
     def get_response_df_path(self, session_block_name):
-        path = os.path.join(self.dataset.analysis_dir, session_block_name + '_response_df.h5')
+        path = os.path.join(self.dataset.analysis_dir, session_block_name + '_response_df'+self.suffix+'.h5')
         return path
 
     def save_response_df(self, response_df, session_block_name):
