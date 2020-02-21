@@ -7,7 +7,7 @@ from pbstools import PythonJob # flake8: noqa: E999
 
 python_file = r"/home/marinag/openscope_predictive_coding/scripts/create_multi_session_mean_df.py"
 
-jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
+jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords_opc'
 
 job_settings = {'queue': 'braintv',
                 'mem': '60g',
