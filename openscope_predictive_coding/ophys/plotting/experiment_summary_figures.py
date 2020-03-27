@@ -220,6 +220,31 @@ def plot_mean_trace_with_stimulus_blocks(analysis, ax=None, save=False):
         save_figure(fig, figsize, dataset.analysis_dir, 'population_average', str(dataset.experiment_id)+'_cell_average_stimulus_blocks')
     return ax
 
+# def plot_mean_running_trace_with_stimulus_blocks(analysis, ax=None, save=False):
+#     dataset = analysis.dataset
+#     block_df = analysis.block_df
+#
+#     colors = sns.color_palette('deep')
+#     if ax is None:
+#         figsize=(20,5)
+#         fig, ax = plt.subplots(figsize=figsize)
+#
+#     ax.plot(dataset.timestamps_ophys, np.nanmean(dataset.running_speed.,axis=0))
+#     ax.set_xlabel('time (seconds)')
+#     ax.set_ylabel('dF/F')
+#     ax.set_title('population average')
+#
+#     for i, block_name in enumerate(block_df.block_name.values):
+#         start_time = block_df[block_df.block_name==block_name].start_time.values[0]
+#         end_time = block_df[block_df.block_name==block_name].end_time.values[0]
+#         ax.axvspan(start_time, end_time, facecolor=colors[i], edgecolor='none', alpha=0.3, linewidth=0, zorder=1, label=block_name)
+#     ax.legend(bbox_to_anchor=(1,0.3))
+#     if save:
+#         fig.tight_layout()
+#         plt.gcf().subplots_adjust(right=0.8)
+#         save_figure(fig, figsize, dataset.analysis_dir, 'population_average', str(dataset.experiment_id)+'_cell_average_stimulus_blocks')
+#     return ax
+
 
 def plot_mean_neuropil_trace_with_stimulus_blocks(analysis, ax=None, save=False):
     dataset = analysis.dataset
@@ -339,6 +364,60 @@ def plot_mean_sequence_violation(analysis, ax=None, save=False):
     return ax
 
 
+def plot_mean_first_flash_response_by_image_block(analysis, save_dir=None, ax=None):
+    fdf = analysis.flash_response_df.copy()
+    fdf.image_block = [int(image_block) for image_block in fdf.image_block.values]
+    data = fdf[(fdf.repeat==1)&(fdf.pref_stim==True)]
+    mean_response = data.groupby(['cell']).apply(ut.get_mean_sem)
+    mean_response = mean_response.unstack()
+
+    cell_order = np.argsort(mean_response.mean_response.values)
+    if ax is None:
+        figsize = (15,5)
+        fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.pointplot(data = data, x="image_block", y="mean_response", kind="point", hue='cell', hue_order=cell_order,
+                       palette='Blues',ax = ax)
+    # ax.legend(bbox_to_anchor=(1,1))
+    ax.legend_.remove()
+    min = mean_response.mean_response.min()
+    max = mean_response.mean_response.max()
+    norm = plt.Normalize(min,max)
+#     norm = plt.Normalize(0,5)
+    sm = plt.cm.ScalarMappable(cmap="Blues", norm=norm)
+    sm.set_array([])
+    cbar = ax.figure.colorbar(mappable=sm, ax=ax, label='mean response across blocks')
+    ax.set_title('mean response to first flash of pref stim across image blocks')
+    if save_dir:
+        fig.tight_layout()
+        save_figure(fig,figsize,save_dir,'first_flash_by_image_block',analysis.dataset.analysis_folder)
+    return ax
+
+
+def plot_mean_response_across_image_block_sets(data, analysis_folder, save_dir=None, ax=None):
+    order = np.argsort(data[data.image_block==1].early_late_block_ratio.values)
+    cell_order = data[data.image_block==1].cell.values[order]
+    if ax is None:
+        figsize = (6,5)
+        fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.pointplot(data = data, x="block_set", y="mean_response", kind="point", palette='RdBu',ax = ax,
+                      hue='cell', hue_order=cell_order)
+    # ax.legend(bbox_to_anchor=(1,1))
+    ax.legend_.remove()
+    min = np.amin(data.early_late_block_ratio.unique())
+    max = np.amax(data.early_late_block_ratio.unique())
+    norm = plt.Normalize(min,max)
+#     norm = plt.Normalize(0,5)
+    sm = plt.cm.ScalarMappable(cmap="RdBu", norm=norm)
+    sm.set_array([])
+    cbar = ax.figure.colorbar(mappable=sm, ax=ax, label='first/last ratio')
+    ax.set_title('mean response across image blocks\ncolored by ratio of first to last block')
+    fig.tight_layout()
+    if save_dir:
+        fig.tight_layout()
+        save_figure(fig,figsize,save_dir,'first_flash_by_image_block_set',analysis_folder)
+    return ax
+
+
 def plot_experiment_summary_figure(analysis, save_dir=None):
     interval_seconds = 600
     ophys_frame_rate = 31
@@ -420,59 +499,6 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
         save_figure(fig, figsize, save_dir, 'experiment_summary', analysis.dataset.analysis_folder)
 
 
-
-def plot_mean_first_flash_response_by_image_block(analysis, save_dir=None, ax=None):
-    fdf = analysis.flash_response_df.copy()
-    fdf.image_block = [int(image_block) for image_block in fdf.image_block.values]
-    data = fdf[(fdf.repeat==1)&(fdf.pref_stim==True)]
-    mean_response = data.groupby(['cell']).apply(ut.get_mean_sem)
-    mean_response = mean_response.unstack()
-
-    cell_order = np.argsort(mean_response.mean_response.values)
-    if ax is None:
-        figsize = (15,5)
-        fig, ax = plt.subplots(figsize=figsize)
-    ax = sns.pointplot(data = data, x="image_block", y="mean_response", kind="point", hue='cell', hue_order=cell_order,
-                       palette='Blues',ax = ax)
-    # ax.legend(bbox_to_anchor=(1,1))
-    ax.legend_.remove()
-    min = mean_response.mean_response.min()
-    max = mean_response.mean_response.max()
-    norm = plt.Normalize(min,max)
-#     norm = plt.Normalize(0,5)
-    sm = plt.cm.ScalarMappable(cmap="Blues", norm=norm)
-    sm.set_array([])
-    cbar = ax.figure.colorbar(mappable=sm, ax=ax, label='mean response across blocks')
-    ax.set_title('mean response to first flash of pref stim across image blocks')
-    if save_dir:
-        fig.tight_layout()
-        save_figure(fig,figsize,save_dir,'first_flash_by_image_block',analysis.dataset.analysis_folder)
-    return ax
-
-
-def plot_mean_response_across_image_block_sets(data, analysis_folder, save_dir=None, ax=None):
-    order = np.argsort(data[data.image_block==1].early_late_block_ratio.values)
-    cell_order = data[data.image_block==1].cell.values[order]
-    if ax is None:
-        figsize = (6,5)
-        fig, ax = plt.subplots(figsize=figsize)
-    ax = sns.pointplot(data = data, x="block_set", y="mean_response", kind="point", palette='RdBu',ax = ax,
-                      hue='cell', hue_order=cell_order)
-    # ax.legend(bbox_to_anchor=(1,1))
-    ax.legend_.remove()
-    min = np.amin(data.early_late_block_ratio.unique())
-    max = np.amax(data.early_late_block_ratio.unique())
-    norm = plt.Normalize(min,max)
-#     norm = plt.Normalize(0,5)
-    sm = plt.cm.ScalarMappable(cmap="RdBu", norm=norm)
-    sm.set_array([])
-    cbar = ax.figure.colorbar(mappable=sm, ax=ax, label='first/last ratio')
-    ax.set_title('mean response across image blocks\ncolored by ratio of first to last block')
-    fig.tight_layout()
-    if save_dir:
-        fig.tight_layout()
-        save_figure(fig,figsize,save_dir,'first_flash_by_image_block_set',analysis_folder)
-    return ax
 
 
 if __name__ == '__main__':

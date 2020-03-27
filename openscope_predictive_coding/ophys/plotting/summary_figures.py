@@ -702,6 +702,20 @@ def plot_image_tc_across_stimulus_types(analysis, cell_specimen_id, ax=None, sav
         plt.close()
     return ax
 
+def plot_image(dataset, session_block_name, image_id, ax=None):
+    st = dataset.stimulus_table
+    st = st[st.session_block_name==session_block_name]
+    file_name = st[st.image_id==image_id].iloc[0].data_file_name
+    file_index = st[st.image_id==image_id].iloc[0].data_file_index
+    image_data = np.load(file_name)
+    image = image_data[file_index, :, :]
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax.imshow(image, cmap='gray')
+    ax.axis('off')
+    ax.set_title(str(int(image_id)))
+    return ax
+
 
 def plot_cell_summary_figure(analysis, cell_specimen_id, save=False, show=True):
     dataset = analysis.dataset

@@ -17,6 +17,69 @@ sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False, 'x
 sns.set_palette('deep')
 
 
+def get_xticks_xticklabels(trace, frame_rate, interval_sec=1, window=[-2,2]):
+    """
+    Function that accepts a timeseries, evaluates the number of points in the trace, and converts from acquisition frames to timestamps
+
+    :param trace: a single trace where length = the number of timepoints
+    :param frame_rate: ophys frame rate if plotting a calcium trace, stimulus frame rate if plotting running speed
+    :param interval_sec: interval in seconds in between labels
+
+    :return: xticks, xticklabels = xticks in frames corresponding to timepoints in the trace, xticklabels in seconds
+    """
+    interval_frames = interval_sec * frame_rate
+    n_frames = len(trace)
+    n_sec = n_frames / frame_rate
+    xticks = np.arange(0, n_frames + 5, interval_frames)
+    xticklabels = np.arange(0, n_sec + 0.1, interval_sec)
+    xticklabels = xticklabels + window[0]
+    if interval_sec >= 1:
+        xticklabels = [int(x) for x in xticklabels]
+    return xticks, xticklabels
+
+
+def plot_response_across_conditions_population(df, condition='area', conditions=['VISp', 'VISpm', 'RSP'],
+                                               window=[-2, 2], save_figures=False, colors=None, autoscale=False,
+                                               title='', save_dir=None, folder=None, ax=None, pref_stim=False,
+                                               frame_rate=31.):
+    if pref_stim:
+        df = df[df.pref_stim == True].copy()
+    if ax is None:
+        figsize = (5, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+    for c, condition_value in enumerate(conditions):
+        tmp = df[df[condition] == condition_value]
+        if colors is None:
+            colors = sns.color_palette()
+        traces = tmp.mean_trace.values
+        trace = np.mean(traces, axis=0)
+        ax = sf.plot_mean_trace(traces, frame_rate, legend_label=condition_value, color=colors[c],
+                                interval_sec=0.5, xlims=window, ax=ax)
+
+    ax.axvspan(np.abs(window[0]) * frame_rate, (np.abs(window[0]) + 0.25) * frame_rate,
+               facecolor='gray', edgecolor='none', alpha=0.5, linewidth=0, zorder=1)
+
+    #     ax = plot_flashes_on_trace(ax, flashes=False, alpha=0.15, window=window, omitted=True)
+
+    xticks, xticklabels = get_xticks_xticklabels(trace, 31., interval_sec=1, window=window)
+    ax.set_xticks(xticks)
+    ax.set_xticklabels([int(x) for x in xticklabels])
+    #     ax.set_xlim(0,(np.abs(window[0])+window[1])*31.)
+    ax.legend(bbox_to_anchor=(1.1, 1), title=condition)
+    if not autoscale:
+        ymin, ymax = ax.get_ylim()
+        if ymin > 0:
+            ax.set_ylim(0, ymax * 1.2)
+        else:
+            ax.set_ylim(ymin * 1.2, ymax * 1.2)
+    ax.set_title(title)
+    if save_figures:
+        fig.tight_layout()
+        save_figure(fig, figsize, save_dir, folder, 'population_response_across_' + condition + '_' + cre_line)
+    return ax
+
+
+
 def plot_histogram(values, label, color='k', range=(0, 1), ax=None, offset=False, bins=30):
     results, edges = np.histogram(values, normed=True, range=range, bins=bins)
     binWidth = edges[1] - edges[0]
@@ -376,23 +439,29 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
                     'change_response_matrix_' + cre_line + '_' + image_set + '_' + suffix)
 
 
-def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, folder=None, use_events=False, colorbar=True):
+def plot_tuning_curve_heatmap(df, images, cell_order=None, vmax=None, title=None, ax=None, save_dir=None, folder=None, use_events=False, colorbar=True):
+    location = df.location.unique()[0]
     image_name = 'image_id'
     suffix = ''
     if use_events:
-        vmax = 0.03
+        if vmax is None:
+            vmax = 0.03
         label = 'mean event magnitude'
         suffix = suffix+'_events'
     else:
+        if vmax is None:
+            vmax = 0.3
         label = 'mean dF/F'
         suffix = suffix
-    images = np.sort(df[image_name].unique())
-    cell_list = []
-    for image in images:
-        tmp = df[(df[image_name] == image) & (df.pref_stim == True)]
-        order = np.argsort(tmp.mean_response.values)[::-1]
-        cell_ids = list(tmp.cell_specimen_id.values[order])
-        cell_list = cell_list + cell_ids
+    if cell_order == None:
+        cell_list = []
+        for image in images:
+            tmp = df[(df[image_name] == image) & (df.pref_stim == True)]
+            order = np.argsort(tmp.mean_response.values)[::-1]
+            cell_ids = list(tmp.cell_specimen_id.values[order])
+            cell_list = cell_list + cell_ids
+    else:
+        cell_list = cell_order
     response_matrix = np.empty((len(cell_list), len(images)))
     for i, cell in enumerate(cell_list):
         responses = []
@@ -401,15 +470,16 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
             responses.append(response)
         response_matrix[i, :] = np.asarray(responses)
     if ax is None:
-        figsize = (5, 8)
+        figsize = (4, 8)
         fig, ax = plt.subplots(figsize=figsize)
         fig.tight_layout()
     ax = sns.heatmap(response_matrix, cmap='magma', linewidths=0, linecolor='white', square=False,
                      vmin=0, vmax=vmax, robust=True, cbar=colorbar,
                      cbar_kws={"drawedges": False, "shrink": 1, "label": label}, ax=ax)
 
-    ax.set_title(cre_line, va='bottom', ha='center')
-    ax.set_xticklabels(images, rotation=90)
+    ax.set_title(title, va='bottom', ha='center')
+    ax.set_xticks(np.arange(0, len(images)))
+    ax.set_xticklabels([int(image) for image in images], rotation=90, fontsize=14)
     ax.set_ylabel('cells')
     ax.set_yticks((0, response_matrix.shape[0]))
     ax.set_yticklabels((0, response_matrix.shape[0]), fontsize=14)
@@ -417,7 +487,7 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
         plt.suptitle('image set ' + image_set, x=0.46, y=0.99, fontsize=18)
         fig.tight_layout()
         plt.gcf().subplots_adjust(top=0.9)
-        save_figure(fig, figsize, save_dir, folder, 'tuning_curve_heatmap_'+cre_line+'_'+image_set)
+        save_figure(fig, figsize, save_dir, folder, 'tuning_curve_heatmap_'+location+'_'+image_set)
     return ax
 
 
