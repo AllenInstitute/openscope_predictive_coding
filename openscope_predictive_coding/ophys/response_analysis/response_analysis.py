@@ -181,14 +181,18 @@ class ResponseAnalysis(object):
                 os.remove(self.get_response_df_path(session_block_name))
             response_df = self.generate_response_df(session_block_name)
             self.save_response_df(response_df, session_block_name)
-        elif self.preload_response_dfs:
-            if os.path.exists(self.get_response_df_path(session_block_name)):
-                print('loading response dataframe for', session_block_name)
-                response_df = pd.read_hdf(self.get_response_df_path(session_block_name), key='df')
-            else:
-                print('**couldnt load response dataframe for', session_block_name)
         else:
-            response_df = self.generate_response_df(session_block_name)
+            if os.path.exists(self.get_response_df_path(session_block_name)):
+                try:
+                    print('loading response dataframe for', session_block_name)
+                    response_df = pd.read_hdf(self.get_response_df_path(session_block_name), key='df')
+                except:
+                    print('couldnt load response dataframe for', session_block_name, '- regenerating')
+                    response_df = self.generate_response_df(session_block_name)
+                    self.save_response_df(response_df, session_block_name)
+            else:
+                print('no response dataframe file for', session_block_name,'- generating')
+                response_df = self.generate_response_df(session_block_name)
         stimulus_block = self.get_stimulus_block(session_block_name)
         response_df = response_df.merge(stimulus_block, on='stimulus_presentations_id')
         if session_block_name == 'transition_control':

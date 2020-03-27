@@ -264,4 +264,8 @@ def stimulus_response_df(stimulus_response_xr):
     return df
 
 
+def trace_average(values, timestamps, start_time, stop_time):
+    values_this_range = values[((timestamps >= start_time) & (timestamps < stop_time))]
+    return values_this_range.mean()
+
 
