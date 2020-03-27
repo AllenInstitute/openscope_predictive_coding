@@ -223,60 +223,72 @@ def get_pkl(lims_data):
     pkl = pd.read_pickle(os.path.join(analysis_dir, pkl_file))
     return pkl
 
-#
-# def calc_deriv(x, time):
-#     dx = np.diff(x)
-#     dt = np.diff(time)
-#     dxdt_rt = np.hstack((np.nan, dx / dt))
-#     dxdt_lt = np.hstack((dx / dt, np.nan))
-#
-#     dxdt = np.vstack((dxdt_rt, dxdt_lt))
-#
-#     dxdt = np.nanmean(dxdt, axis=0)
-#
-#     return dxdt
-#
-#
-# def rad_to_dist(speed_rad_per_s):
-#     wheel_diameter = 6.5 * 2.54  # 6.5" wheel diameter
-#     running_radius = 0.5 * (
-#         2.0 * wheel_diameter / 3.0)  # assume the animal runs at 2/3 the distance from the wheel center
-#     running_speed_cm_per_sec = np.pi * speed_rad_per_s * running_radius / 180.
-#     return running_speed_cm_per_sec
-#
-#
-# def load_running_speed(pkl, smooth=False, time=None):
-#     if time is None:
-#         print('`time` not passed. using vsync from pkl file')
-#         time = load_time(data)
-#
-#     dx_raw = np.array(data['dx'])
-#     dx = medfilt(dx_raw, kernel_size=5)  # remove big, single frame spikes in encoder values
-#     dx = np.cumsum(dx)  # wheel rotations
-#
-#     time = time[:len(dx)]
-#
-#     speed = calc_deriv(dx, time)
-#     speed = rad_to_dist(speed)
-#
-#     if smooth:
-#         # running_speed_cm_per_sec = pd.rolling_mean(running_speed_cm_per_sec, window=6)
-#         raise NotImplementedError
-#
-#     # accel = calc_deriv(speed, time)
-#     # jerk = calc_deriv(accel, time)
-#
-#     running_speed = pd.DataFrame({
-#         'time': time,
-#         'frame': range(len(time)),
-#         'speed': speed,
-#         'dx': dx_raw,
-#         'v_sig': data['vsig'],
-#         'v_in': data['vin'],
-#         # 'acceleration (cm/s^2)': accel,
-#         # 'jerk (cm/s^3)': jerk,
-#     })
-#     return running_speed
+
+def calc_deriv(x, time):
+    dx = np.diff(x)
+    dt = np.diff(time)
+    dxdt_rt = np.hstack((np.nan, dx / dt))
+    dxdt_lt = np.hstack((dx / dt, np.nan))
+
+    dxdt = np.vstack((dxdt_rt, dxdt_lt))
+
+    dxdt = np.nanmean(dxdt, axis=0)
+
+    return dxdt
+
+
+def rad_to_dist(speed_rad_per_s):
+    wheel_diameter = 6.5 * 2.54  # 6.5" wheel diameter
+    running_radius = 0.5 * (
+        2.0 * wheel_diameter / 3.0)  # assume the animal runs at 2/3 the distance from the wheel center
+    running_speed_cm_per_sec = np.pi * speed_rad_per_s * running_radius / 180.
+    return running_speed_cm_per_sec
+
+
+def process_running_speed(data, smooth=False, time=None):
+    from scipy.signal import medfilt
+    if time is None:
+        print('`time` not passed. using vsync from pkl file')
+        time = load_time(data)
+
+    dx_raw = np.array(data['dx'])
+    dx = medfilt(dx_raw, kernel_size=5)  # remove big, single frame spikes in encoder values
+    dx = np.cumsum(dx)  # wheel rotations
+
+    time = time[:len(dx)]
+
+    speed = calc_deriv(dx, time)
+    speed = rad_to_dist(speed)
+
+    if smooth:
+        # running_speed_cm_per_sec = pd.rolling_mean(running_speed_cm_per_sec, window=6)
+        raise NotImplementedError
+
+    # accel = calc_deriv(speed, time)
+    # jerk = calc_deriv(accel, time)
+
+    running_speed = pd.DataFrame({
+        'time': time,
+        'frame': range(len(time)),
+        'speed': speed,
+        'dx': dx_raw,
+        # 'v_sig': data['vsig'],
+        # 'v_in': data['vin'],
+        # 'acceleration (cm/s^2)': accel,
+        # 'jerk (cm/s^3)': jerk,
+    })
+    return running_speed
+
+
+def get_running_speed(lims_data):
+    timestamps = get_timestamps(lims_data)
+    stimulus_timestamps = get_timestamps_stimulus(timestamps)
+    pkl_path = get_stimulus_pkl_path(lims_data)
+    pkl_data = pd.read_pickle(pkl_path)
+    running_data = pkl_data['items']['foraging']['encoders'][0]
+    running_speed = process_running_speed(running_data, smooth=False, time=stimulus_timestamps)
+    save_dataframe_as_h5(running_speed, 'running_speed', get_analysis_dir(lims_data))
+    return running_speed
 
 def get_stimulus_table(lims_data, timestamps_stimulus):
     import openscope_predictive_coding.utilities as utilities

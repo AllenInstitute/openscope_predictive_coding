@@ -110,8 +110,18 @@ class OpenScopePredictiveCodingDataset(object):
     timestamps_ophys = LazyLoadable('_timestamps_ophys', get_timestamps_ophys)
 
     def get_stimulus_table(self):
-        self._stimulus_table = pd.read_hdf(os.path.join(self.analysis_dir, 'stimulus_table.h5'), key='df')
-        self._stimulus_table.index.name = 'stimulus_presentations_id'
+        import openscope_predictive_coding.ophys.response_analysis.response_processing as rp
+        stimulus_table = pd.read_hdf(os.path.join(self.analysis_dir, 'stimulus_table.h5'), key='df')
+        stimulus_table.index.name = 'stimulus_presentations_id'
+        # Average running speed on each flash
+        stimulus_running_speed = stimulus_table.apply(
+            lambda row: rp.trace_average(
+                self.running_speed['speed'].values,
+                self.running_speed['time'].values,
+                row["start_time"],
+                row["start_time"] + 0.25, ), axis=1, )
+        stimulus_table["mean_running_speed"] = stimulus_running_speed
+        self._stimulus_table = stimulus_table
         return self._stimulus_table
     stimulus_table = LazyLoadable('_stimulus_table', get_stimulus_table)
 
@@ -135,11 +145,11 @@ class OpenScopePredictiveCodingDataset(object):
     #     return self._stimulus_metadata
     # stimulus_metadata = LazyLoadable('_stimulus_metadata', get_stimulus_metadata)
     #
-    # def get_running_speed(self):
-    #     self._running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running_speed.h5'), key='df')
-    #     return self._running_speed
-    # running_speed = LazyLoadable('_running_speed', get_running_speed)
-    #
+    def get_running_speed(self):
+        self._running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running_speed.h5'), key='df')
+        return self._running_speed
+    running_speed = LazyLoadable('_running_speed', get_running_speed)
+
 
     def get_dff_traces(self):
         with h5py.File(os.path.join(self.analysis_dir, 'dff_traces.h5'), 'r') as dff_traces_file:
@@ -307,7 +317,7 @@ class OpenScopePredictiveCodingDataset(object):
         obj.get_stimulus_name()
         # obj.get_stimulus_template()
         # obj.get_stimulus_metadata()
-        # obj.get_running_speed()
+        obj.get_running_speed()
         obj.get_dff_traces()
         obj.get_dff_traces_array()
         obj.get_events_array()
