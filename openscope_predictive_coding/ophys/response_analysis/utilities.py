@@ -54,8 +54,8 @@ def ptest(x, num_conditions):
 def get_mean_sem_trace(group):
     mean_response = np.mean(group['mean_response'])
     sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
-    mean_trace = np.mean(group['trace'])
-    sem_trace = np.std(group['trace'].values) / np.sqrt(len(group['trace'].values))
+    mean_trace = np.mean(group['dff_trace'])
+    sem_trace = np.std(group['dff_trace'].values) / np.sqrt(len(group['dff_trace'].values))
     return pd.Series({'mean_response': mean_response, 'sem_response': sem_response,
                       'mean_trace': mean_trace, 'sem_trace': sem_trace})
 
@@ -63,48 +63,53 @@ def get_mean_sem_trace(group):
 def annotate_trial_response_df_with_pref_stim(trial_response_df):
     rdf = trial_response_df.copy()
     rdf['pref_stim'] = False
-    mean_response = rdf.groupby(['cell', 'change_image_name']).apply(get_mean_sem_trace)
+    mean_response = rdf.groupby(['cell_specimen_id', 'image_id']).apply(get_mean_sem_trace)
     m = mean_response.unstack()
-    for cell in m.index:
-        image_index = np.where(m.loc[cell]['mean_response'].values == np.max(m.loc[cell]['mean_response'].values))[0][0]
-        pref_image = m.loc[cell]['mean_response'].index[image_index]
-        trials = rdf[(rdf.cell == cell) & (rdf.change_image_name == pref_image)].index
+    for cell in m.cell_specimen_id.values:
+        cdf = m[m.cell_specimen_id==cell]
+        image_index = np.where(cdf['mean_response'].values == np.max(cdf['mean_response'].values))[0][0]
+        pref_image = cdf['mean_response'].index[image_index]
+        trials = rdf[(rdf.cell_specimen_id == cell) & (rdf.image_id == pref_image)].index
         for trial in trials:
             rdf.loc[trial, 'pref_stim'] = True
     return rdf
 
 
 def get_mean_sem(group):
-    mean_response = np.mean(group['mean_response'])
+    mean_response = np.nanmean(group['mean_response'])
     sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
     return pd.Series({'mean_response': mean_response, 'sem_response': sem_response})
 
 
-def annotate_flash_response_df_with_pref_stim(fdf):
-    fdf['pref_stim'] = False
-    mean_response = fdf.groupby(['cell', 'image_name']).apply(get_mean_sem)
-    m = mean_response.unstack()
-    for cell in m.index:
-        image_index = np.where(m.loc[cell]['mean_response'].values == np.max(m.loc[cell]['mean_response'].values))[0][0]
-        pref_image = m.loc[cell]['mean_response'].index[image_index]
-        trials = fdf[(fdf.cell == cell) & (fdf.image_name == pref_image)].index
-        for trial in trials:
-            fdf.loc[trial, 'pref_stim'] = True
-    return fdf
+# def annotate_flash_response_df_with_pref_stim(fdf):
+#     fdf['pref_stim'] = False
+#     mean_response = fdf.groupby(['cell', 'image_name']).apply(get_mean_sem)
+#     m = mean_response.unstack()
+#     for cell in m.index:
+#         image_index = np.where(m.loc[cell]['mean_response'].values == np.max(m.loc[cell]['mean_response'].values))[0][0]
+#         pref_image = m.loc[cell]['mean_response'].index[image_index]
+#         trials = fdf[(fdf.cell == cell) & (fdf.image_name == pref_image)].index
+#         for trial in trials:
+#             fdf.loc[trial, 'pref_stim'] = True
+#     return fdf
 
 
 def annotate_mean_df_with_pref_stim(mean_df, flashes=False):
     if flashes:
-        image_name = 'image_name'
+        image_name = 'image_id'
     else:
-        image_name = 'change_image_name'
+        image_name = 'image_id'
     mdf = mean_df.reset_index()
     mdf['pref_stim'] = False
+    if 'cell_specimen_id' in mdf.keys():
+        cell_label = 'cell_specimen_id'
+    elif 'cell_index' in mdf.keys():
+        cell_label = 'cell_index'
 
-    for cell in mdf.cell.unique():
-        mc = mdf[(mdf.cell == cell)]
+    for cell in mdf[cell_label].unique():
+        mc = mdf[(mdf[cell_label] == cell)]
         pref_image = mc[(mc.mean_response == np.max(mc.mean_response.values))][image_name].values[0]
-        row = mdf[(mdf.cell == cell) & (mdf[image_name] == pref_image)].index
+        row = mdf[(mdf[cell_label] == cell) & (mdf[image_name] == pref_image)].index
         mdf.loc[row, 'pref_stim'] = True
     return mdf
 
@@ -119,13 +124,14 @@ def get_fraction_responsive_trials(group):
     return pd.Series({'fraction_responsive_trials': fraction_responsive_trials})
 
 
-def get_mean_df(trial_response_df, conditions=['cell', 'change_image_name']):
-    rdf = trial_response_df.copy()
+def get_mean_df(response_df, conditions=['cell_specimen_id', 'image_id']):
+    rdf = response_df.copy()
 
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
     mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace']]
     mdf = mdf.reset_index()
-    mdf = annotate_mean_df_with_pref_stim(mdf)
+    if 'image_id' in mdf.keys():
+        mdf = annotate_mean_df_with_pref_stim(mdf)
 
     fraction_significant_trials = rdf.groupby(conditions).apply(get_fraction_significant_trials)
     fraction_significant_trials = fraction_significant_trials.reset_index()
@@ -137,21 +143,32 @@ def get_mean_df(trial_response_df, conditions=['cell', 'change_image_name']):
 
     return mdf
 
-def get_gray_response_df(dataset, window=0.5):
-    window = 0.5
-    row = []
-    flashes = dataset.stimulus_table.copy()
-    stim_duration = dataset.task_parameters.stimulus_duration.values[0]
-    for cell in range(dataset.dff_traces.shape[0]):
-        for x,gray_start_time in enumerate(flashes.end_time[:-5]): #exclude the last 5 frames to prevent truncation of traces
-            ophys_start_frame = int(np.nanargmin(abs(dataset.timestamps_ophys - gray_start_time)))
-            ophys_end_time = gray_start_time + int(dataset.metadata.ophys_frame_rate.values[0] * 0.5)
-            gray_end_time = gray_start_time + window
-            ophys_end_frame = int(np.nanargmin(abs(dataset.timestamps_ophys - ophys_end_time)))
-            mean_response = np.mean(dataset.dff_traces[cell][ophys_start_frame:ophys_end_frame])
-            row.append([cell, x, gray_start_time, gray_end_time, mean_response])
-    gray_response_df = pd.DataFrame(data=row, columns=['cell', 'gray_number', 'gray_start_time', 'gray_end_time', 'mean_response'])
-    return gray_response_df
+
+def add_metadata_to_mean_df(mdf, metadata):
+    metadata = metadata.reset_index()
+    metadata = metadata.rename(columns={'ophys_experiment_id': 'experiment_id'})
+    metadata = metadata.drop(columns=['ophys_frame_rate', 'stimulus_frame_rate', 'index'])
+    metadata['experiment_id'] = [int(experiment_id) for experiment_id in metadata.experiment_id]
+    metadata['session_num'] = metadata.session_type.values[0][-1]
+    mdf = mdf.merge(metadata, how='outer', on='experiment_id')
+    return mdf
+
+
+# def get_gray_response_df(dataset, window=0.5):
+#     window = 0.5
+#     row = []
+#     flashes = dataset.stimulus_table.copy()
+#     stim_duration = dataset.task_parameters.stimulus_duration.values[0]
+#     for cell in range(dataset.dff_traces.shape[0]):
+#         for x,gray_start_time in enumerate(flashes.end_time[:-5]): #exclude the last 5 frames to prevent truncation of traces
+#             ophys_start_frame = int(np.nanargmin(abs(dataset.timestamps_ophys - gray_start_time)))
+#             ophys_end_time = gray_start_time + int(dataset.metadata.ophys_frame_rate.values[0] * 0.5)
+#             gray_end_time = gray_start_time + window
+#             ophys_end_frame = int(np.nanargmin(abs(dataset.timestamps_ophys - ophys_end_time)))
+#             mean_response = np.mean(dataset.dff_traces[cell][ophys_start_frame:ophys_end_frame])
+#             row.append([cell, x, gray_start_time, gray_end_time, mean_response])
+#     gray_response_df = pd.DataFrame(data=row, columns=['cell', 'gray_number', 'gray_start_time', 'gray_end_time', 'mean_response'])
+#     return gray_response_df
 
 
 def add_repeat_to_stimulus_table(stimulus_table):

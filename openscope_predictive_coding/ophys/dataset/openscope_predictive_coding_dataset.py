@@ -87,12 +87,15 @@ class OpenScopePredictiveCodingDataset(object):
     analysis_dir = LazyLoadable('_analysis_dir', get_analysis_dir)
 
     def get_metadata(self):
-        self._metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df', format='fixed')
+        metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df')
+        metadata['depth'] = ['deep' if depth > 250 else 'superficial' for depth in metadata.imaging_depth.values]
+        metadata['location'] = metadata.targeted_structure + '_' + metadata.depth
+        self._metadata = metadata
         return self._metadata
     metadata = LazyLoadable('_metadata', get_metadata)
 
     def get_timestamps(self):
-        self._timestamps = pd.read_hdf(os.path.join(self.analysis_dir, 'timestamps.h5'), key='df', format='fixed')
+        self._timestamps = pd.read_hdf(os.path.join(self.analysis_dir, 'timestamps.h5'), key='df')
         return self._timestamps
     timestamps = LazyLoadable('_timestamps', get_timestamps)
 
@@ -107,7 +110,18 @@ class OpenScopePredictiveCodingDataset(object):
     timestamps_ophys = LazyLoadable('_timestamps_ophys', get_timestamps_ophys)
 
     def get_stimulus_table(self):
-        self._stimulus_table = pd.read_hdf(os.path.join(self.analysis_dir, 'stimulus_table.h5'), key='df', format='fixed')
+        import openscope_predictive_coding.ophys.response_analysis.response_processing as rp
+        stimulus_table = pd.read_hdf(os.path.join(self.analysis_dir, 'stimulus_table.h5'), key='df')
+        stimulus_table.index.name = 'stimulus_presentations_id'
+        # Average running speed on each flash
+        stimulus_running_speed = stimulus_table.apply(
+            lambda row: rp.trace_average(
+                self.running_speed['speed'].values,
+                self.running_speed['time'].values,
+                row["start_time"],
+                row["start_time"] + 0.25, ), axis=1, )
+        stimulus_table["mean_running_speed"] = stimulus_running_speed
+        self._stimulus_table = stimulus_table
         return self._stimulus_table
     stimulus_table = LazyLoadable('_stimulus_table', get_stimulus_table)
 
@@ -126,29 +140,87 @@ class OpenScopePredictiveCodingDataset(object):
     # def get_stimulus_metadata(self):
     #     self._stimulus_metadata = pd.read_hdf(
     #         os.path.join(self.analysis_dir, 'stimulus_metadata.h5'),
-    #         key='df', format='fixed'
-    #     )
+    #         key='df' )
     #     self._stimulus_metadata = self._stimulus_metadata.drop(columns='image_category')
     #     return self._stimulus_metadata
     # stimulus_metadata = LazyLoadable('_stimulus_metadata', get_stimulus_metadata)
     #
-    # def get_running_speed(self):
-    #     self._running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running_speed.h5'), key='df', format='fixed')
-    #     return self._running_speed
-    # running_speed = LazyLoadable('_running_speed', get_running_speed)
-    #
+    def get_running_speed(self):
+        self._running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running_speed.h5'), key='df')
+        return self._running_speed
+    running_speed = LazyLoadable('_running_speed', get_running_speed)
+
 
     def get_dff_traces(self):
+        with h5py.File(os.path.join(self.analysis_dir, 'dff_traces.h5'), 'r') as dff_traces_file:
+            dff_traces = pd.DataFrame(columns=['dff'], index = dff_traces_file.keys())
+            for key in dff_traces_file.keys():
+                dff_traces.at[key, 'dff'] = np.asarray(dff_traces_file[key])
+        self._dff_traces = dff_traces
+        return self._dff_traces
+    dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
+
+    def get_dff_traces_array(self):
         with h5py.File(os.path.join(self.analysis_dir, 'dff_traces.h5'), 'r') as dff_traces_file:
             dff_traces = []
             for key in dff_traces_file.keys():
                 dff_traces.append(np.asarray(dff_traces_file[key]))
-        self._dff_traces = np.asarray(dff_traces)
-        return self._dff_traces
-    dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
+        self._dff_traces_array = np.asarray(dff_traces)
+        return self._dff_traces_array
+    dff_traces_array = LazyLoadable('_dff_traces_array', get_dff_traces_array)
+
+    def get_corrected_fluorescence_traces(self):
+        data = h5py.File(os.path.join(self.analysis_dir, 'corrected_fluorescence_traces.h5'), 'r')
+        corrected_fluorescence_traces = []
+        for key in data.keys():
+            corrected_fluorescence_traces.append(np.asarray(data[key]))
+        self._corrected_fluorescence_traces = np.asarray(corrected_fluorescence_traces)
+        return self._corrected_fluorescence_traces
+    corrected_fluorescence_traces = LazyLoadable('_corrected_fluorescence_traces', get_corrected_fluorescence_traces)
+
+    def get_neuropil_traces(self):
+        with h5py.File(os.path.join(self.analysis_dir, 'neuropil_traces.h5'), 'r') as neuropil_traces_file:
+            neuropil_traces = []
+            for key in neuropil_traces_file.keys():
+                neuropil_traces.append(np.asarray(neuropil_traces_file[key]))
+        self._neuropil_traces = np.asarray(neuropil_traces)
+        return self._neuropil_traces
+    neuropil_traces = LazyLoadable('_neuropilf_traces', get_neuropil_traces)
+
+    def get_events_array(self):
+        events_folder = os.path.join(self.cache_dir, 'events')
+        if os.path.exists(events_folder):
+            events_file = [file for file in os.listdir(events_folder) if str(self.experiment_id) + '_events.npz' in file]
+            if len(events_file) > 0:
+                print('getting L0 events')
+                f = np.load(os.path.join(events_folder, events_file[0]))
+                events = np.asarray(f['ev'])
+                ## put smoothing here? ##
+                f.close()
+                if events.shape[1] > self.timestamps_ophys.shape[0]:
+                    difference = self.timestamps_ophys.shape[0] - events.shape[1]
+                    print('length of ophys timestamps <  length of events by', str(difference),
+                                'frames , truncating events')
+                    events = events[:, :self.timestamps_ophys.shape[0]]
+            else:
+                print('no events for this experiment')
+                events = None
+        else:
+            print('no events for this experiment')
+            events = None
+        self._events_array = events
+        return self._events_array
+
+    events_array = LazyLoadable('_events_array', get_events_array)
+
+    def get_events(self):
+        self._events = pd.DataFrame({'events': [x for x in self.events_array]}, index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
+        return self._events
+    events = LazyLoadable('_events', get_events)
+
 
     def get_roi_metrics(self):
-        self._roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df', format='fixed')
+        self._roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df')
         return self._roi_metrics
     roi_metrics = LazyLoadable('_roi_metrics', get_roi_metrics)
 
@@ -163,9 +235,9 @@ class OpenScopePredictiveCodingDataset(object):
     roi_mask_dict = LazyLoadable('_roi_mask_dict', get_roi_mask_dict)
 
     def get_roi_mask_array(self):
-        w, h = self.roi_mask_dict[self.roi_mask_dict.keys()[0]].shape
-        roi_mask_array = np.empty((len(self.roi_mask_dict.keys()), w, h))
-        for cell_specimen_id in self.roi_mask_dict.keys():
+        w, h = self.roi_mask_dict[list(self.roi_mask_dict.keys())[0]].shape
+        roi_mask_array = np.empty((len(list(self.roi_mask_dict.keys())), w, h))
+        for cell_specimen_id in list(self.roi_mask_dict.keys()):
             cell_index = self.get_cell_index_for_cell_specimen_id(int(cell_specimen_id))
             roi_mask_array[cell_index] = self.roi_mask_dict[cell_specimen_id]
         self._roi_mask_array = roi_mask_array
@@ -178,12 +250,20 @@ class OpenScopePredictiveCodingDataset(object):
         return self._max_projection
     max_projection = LazyLoadable('_max_projection', get_max_projection)
 
+    def get_average_image(self):
+        with h5py.File(os.path.join(self.analysis_dir, 'average_image.h5'), 'r') as average_image_file:
+            self._average_image = np.asarray(average_image_file['data'])
+        return self._average_image
+    average_image = LazyLoadable('_average_image', get_average_image)
+
     def get_red_channel_image(self):
         import tifffile
-        red_image_file = [file for file in os.listdir(self.analysis_dir) if 'red' in file]
+        # from PIL import Image
+        red_image_file = [file for file in os.listdir(self.analysis_dir) if 'red' in file and '.tif' in file]
         if len(red_image_file) > 0:
             red_image_file_path = os.path.join(self.analysis_dir, red_image_file[0])
             self._red_channel_image = tifffile.imread(red_image_file_path)
+            # self._red_channel_image = Image.open(red_image_file_path)
         else:
             print('no red channel image for', self.experiment_id)
             self._red_channel_image = None
@@ -193,8 +273,7 @@ class OpenScopePredictiveCodingDataset(object):
     def get_motion_correction(self):
         self._motion_correction = pd.read_hdf(
             os.path.join(self.analysis_dir, 'motion_correction.h5'),
-            key='df', format='fixed'
-        )
+            key='df')
         return self._motion_correction
     motion_correction = LazyLoadable('_motion_correction', get_motion_correction)
 
@@ -238,14 +317,20 @@ class OpenScopePredictiveCodingDataset(object):
         obj.get_stimulus_name()
         # obj.get_stimulus_template()
         # obj.get_stimulus_metadata()
-        # obj.get_running_speed()
+        obj.get_running_speed()
         obj.get_dff_traces()
+        obj.get_dff_traces_array()
+        obj.get_events_array()
+        obj.get_events()
+        obj.get_corrected_fluorescence_traces()
+        obj.get_neuropil_traces()
         obj.get_roi_metrics()
         obj.get_roi_mask_dict()
         obj.get_roi_mask_array()
         obj.get_cell_specimen_ids()
         obj.get_cell_indices()
         obj.get_max_projection()
+        obj.get_average_image()
         obj.get_red_channel_image()
         obj.get_motion_correction()
 

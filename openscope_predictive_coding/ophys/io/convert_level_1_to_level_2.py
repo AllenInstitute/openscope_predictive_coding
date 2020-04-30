@@ -42,7 +42,7 @@ def save_data_as_h5(data, name, analysis_dir):
 
 
 def save_dataframe_as_h5(df, name, analysis_dir):
-    df.to_hdf(os.path.join(analysis_dir, name + '.h5'), key='df', format='fixed')
+    df.to_hdf(os.path.join(analysis_dir, name + '.h5'), key='df')
 
 
 def get_cache_dir(cache_dir=None):
@@ -72,11 +72,16 @@ def get_lims_id(lims_data):
 
 def get_analysis_folder_name(lims_data):
     date = str(lims_data.experiment_date.values[0])[:10].split('-')
+    specimen_driver_line = lims_data.specimen_driver_line.values[0].split(';')
+    if len(specimen_driver_line) >1:
+        specimen_driver_line = specimen_driver_line[1].split('-')[0]
+    else:
+        specimen_driver_line = specimen_driver_line[0]
     analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
                            str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
                            lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
-                           lims_data.specimen_driver_line.values[0].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \
-                           lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]
+                           specimen_driver_line + '_' + lims_data.rig.values[0][3:5] + \
+                           lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]  # NOQA: E127
     return analysis_folder_name
 
 
@@ -173,19 +178,19 @@ def get_metadata(lims_data, timestamps):
         metadata['experiment_container_id'] = None
     metadata['targeted_structure'] = lims_data.structure.values[0]
     metadata['imaging_depth'] = int(lims_data.depth.values[0])
-    metadata['cre_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0]
+    metadata['cre_line'] = lims_data.specimen_driver_line[0].split('-')[0]
     if len(lims_data['specimen_driver_line'].values[0].split(';')) > 1:
         metadata['reporter_line'] = lims_data['specimen_driver_line'].values[0].split(';')[1] + ';' + \
                                     lims_data['specimen_reporter_line'].values[0].split('(')[0]
     else:
         metadata['reporter_line'] = lims_data['specimen_reporter_line'].values[0].split('(')[0]
     metadata['full_genotype'] = metadata['cre_line'] + ';' + metadata['reporter_line']
-    metadata['session_type'] = 'behavior_session_' + lims_data.session_type.values[0][-1]
+    metadata['session_type'] = lims_data.session_type.values[0]
     metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
     metadata['experiment_date'] = str(lims_data.experiment_date.values[0])[:10]
     metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
     metadata['specimen_id'] = int(lims_data.specimen_id.values[0])
-    # metadata['session_name'] = lims_data.session_name.values[0]
+    metadata['session_name'] = lims_data.session_name.values[0]
     # metadata['session_id'] = int(lims_data.session_id.values[0])
     # metadata['project_id'] = lims_data.project_id.values[0]
     # metadata['rig'] = lims_data.rig.values[0]
@@ -215,63 +220,75 @@ def get_pkl(lims_data):
         print('moving ', pkl_file, ' to analysis dir')
         shutil.copy2(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
     print('getting stimulus data from pkl')
-    pkl = pd.read_pickle(stimulus_pkl_path)
+    pkl = pd.read_pickle(os.path.join(analysis_dir, pkl_file))
     return pkl
 
-#
-# def calc_deriv(x, time):
-#     dx = np.diff(x)
-#     dt = np.diff(time)
-#     dxdt_rt = np.hstack((np.nan, dx / dt))
-#     dxdt_lt = np.hstack((dx / dt, np.nan))
-#
-#     dxdt = np.vstack((dxdt_rt, dxdt_lt))
-#
-#     dxdt = np.nanmean(dxdt, axis=0)
-#
-#     return dxdt
-#
-#
-# def rad_to_dist(speed_rad_per_s):
-#     wheel_diameter = 6.5 * 2.54  # 6.5" wheel diameter
-#     running_radius = 0.5 * (
-#         2.0 * wheel_diameter / 3.0)  # assume the animal runs at 2/3 the distance from the wheel center
-#     running_speed_cm_per_sec = np.pi * speed_rad_per_s * running_radius / 180.
-#     return running_speed_cm_per_sec
-#
-#
-# def load_running_speed(pkl, smooth=False, time=None):
-#     if time is None:
-#         print('`time` not passed. using vsync from pkl file')
-#         time = load_time(data)
-#
-#     dx_raw = np.array(data['dx'])
-#     dx = medfilt(dx_raw, kernel_size=5)  # remove big, single frame spikes in encoder values
-#     dx = np.cumsum(dx)  # wheel rotations
-#
-#     time = time[:len(dx)]
-#
-#     speed = calc_deriv(dx, time)
-#     speed = rad_to_dist(speed)
-#
-#     if smooth:
-#         # running_speed_cm_per_sec = pd.rolling_mean(running_speed_cm_per_sec, window=6)
-#         raise NotImplementedError
-#
-#     # accel = calc_deriv(speed, time)
-#     # jerk = calc_deriv(accel, time)
-#
-#     running_speed = pd.DataFrame({
-#         'time': time,
-#         'frame': range(len(time)),
-#         'speed': speed,
-#         'dx': dx_raw,
-#         'v_sig': data['vsig'],
-#         'v_in': data['vin'],
-#         # 'acceleration (cm/s^2)': accel,
-#         # 'jerk (cm/s^3)': jerk,
-#     })
-#     return running_speed
+
+def calc_deriv(x, time):
+    dx = np.diff(x)
+    dt = np.diff(time)
+    dxdt_rt = np.hstack((np.nan, dx / dt))
+    dxdt_lt = np.hstack((dx / dt, np.nan))
+
+    dxdt = np.vstack((dxdt_rt, dxdt_lt))
+
+    dxdt = np.nanmean(dxdt, axis=0)
+
+    return dxdt
+
+
+def rad_to_dist(speed_rad_per_s):
+    wheel_diameter = 6.5 * 2.54  # 6.5" wheel diameter
+    running_radius = 0.5 * (
+        2.0 * wheel_diameter / 3.0)  # assume the animal runs at 2/3 the distance from the wheel center
+    running_speed_cm_per_sec = np.pi * speed_rad_per_s * running_radius / 180.
+    return running_speed_cm_per_sec
+
+
+def process_running_speed(data, smooth=False, time=None):
+    from scipy.signal import medfilt
+    if time is None:
+        print('`time` not passed. using vsync from pkl file')
+        time = load_time(data)
+
+    dx_raw = np.array(data['dx'])
+    dx = medfilt(dx_raw, kernel_size=5)  # remove big, single frame spikes in encoder values
+    dx = np.cumsum(dx)  # wheel rotations
+
+    time = time[:len(dx)]
+
+    speed = calc_deriv(dx, time)
+    speed = rad_to_dist(speed)
+
+    if smooth:
+        # running_speed_cm_per_sec = pd.rolling_mean(running_speed_cm_per_sec, window=6)
+        raise NotImplementedError
+
+    # accel = calc_deriv(speed, time)
+    # jerk = calc_deriv(accel, time)
+
+    running_speed = pd.DataFrame({
+        'time': time,
+        'frame': range(len(time)),
+        'speed': speed,
+        'dx': dx_raw,
+        # 'v_sig': data['vsig'],
+        # 'v_in': data['vin'],
+        # 'acceleration (cm/s^2)': accel,
+        # 'jerk (cm/s^3)': jerk,
+    })
+    return running_speed
+
+
+def get_running_speed(lims_data):
+    timestamps = get_timestamps(lims_data)
+    stimulus_timestamps = get_timestamps_stimulus(timestamps)
+    pkl_path = get_stimulus_pkl_path(lims_data)
+    pkl_data = pd.read_pickle(pkl_path)
+    running_data = pkl_data['items']['foraging']['encoders'][0]
+    running_speed = process_running_speed(running_data, smooth=False, time=stimulus_timestamps)
+    save_dataframe_as_h5(running_speed, 'running_speed', get_analysis_dir(lims_data))
+    return running_speed
 
 def get_stimulus_table(lims_data, timestamps_stimulus):
     import openscope_predictive_coding.utilities as utilities
@@ -293,7 +310,7 @@ def get_stimulus_table(lims_data, timestamps_stimulus):
     stimulus_table.insert(loc=0, column='sweep', value=sweeps)
 
     stimulus_table = stimulus_table.reset_index()
-    stimulus_table = stimulus_table.drop(columns=['lk'])
+    # stimulus_table = stimulus_table.drop(columns=['lk'])
 
     return stimulus_table
 
@@ -400,6 +417,7 @@ def add_cell_specimen_ids_to_roi_metrics(roi_metrics, roi_locations):
     return roi_metrics
 
 
+
 def get_roi_metrics(lims_data):
     # objectlist.txt contains metrics associated with segmentation masks
     segmentation_dir = get_segmentation_dir(lims_data)
@@ -413,17 +431,29 @@ def get_roi_metrics(lims_data):
     # merge roi_metrics and roi_locations
     roi_metrics['id'] = roi_metrics.cell_specimen_id.values
     roi_metrics = pd.merge(roi_metrics, roi_locations, on='id')
+    unfiltered_roi_metrics = roi_metrics
     # remove invalid roi_metrics
     roi_metrics = roi_metrics[roi_metrics.valid == True]
+    # hack to get rid of cases with 2 rois at the same location
+    for cell_specimen_id in roi_metrics.cell_specimen_id.values:
+        roi_data = roi_metrics[roi_metrics.cell_specimen_id == cell_specimen_id]
+        if len(roi_data) > 1:
+            ind = roi_data.index
+            roi_metrics = roi_metrics.drop(index=ind.values)
     # add filtered cell index
     cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
                   roi_metrics.cell_specimen_id.values]
     roi_metrics['cell_index'] = cell_index
-    return roi_metrics
+    return roi_metrics, unfiltered_roi_metrics
+
 
 
 def save_roi_metrics(roi_metrics, lims_data):
     save_dataframe_as_h5(roi_metrics, 'roi_metrics', get_analysis_dir(lims_data))
+
+
+def save_unfiltered_roi_metrics(unfiltered_roi_metrics, lims_data):
+    save_dataframe_as_h5(unfiltered_roi_metrics, 'unfiltered_roi_metrics', get_analysis_dir(lims_data))
 
 
 def get_cell_specimen_ids(roi_metrics):
@@ -475,9 +505,27 @@ def get_dff_traces(roi_metrics, lims_data):
     dff_traces = np.asarray(g['data'])
     valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
     dff_traces = dff_traces[valid_roi_indices]
+    # find cells with NaN traces
+    bad_cell_indices = []
+    final_dff_traces = []
+    for i, dff in enumerate(dff_traces):
+        if np.isnan(dff).any():
+            print('NaN trace detected, removing cell_index:',i)
+            bad_cell_indices.append(i)
+        elif np.amax(dff)>20:
+            print('outlier trace detected, removing cell_index',i)
+            bad_cell_indices.append(i)
+        else:
+            final_dff_traces.append(dff)
+    dff_traces = np.asarray(final_dff_traces)
+    roi_metrics = roi_metrics[roi_metrics.cell_index.isin(bad_cell_indices) == False]
+    # reset cell index after removing bad cells
+    cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
+                  roi_metrics.cell_specimen_id.values]
+    roi_metrics['cell_index'] = cell_index
     print('length of traces:', dff_traces.shape[1])
     print('number of segmented cells:', dff_traces.shape[0])
-    return dff_traces
+    return dff_traces, roi_metrics
 
 
 def save_dff_traces(dff_traces, roi_metrics, lims_data):
@@ -488,7 +536,41 @@ def save_dff_traces(dff_traces, roi_metrics, lims_data):
     f.close()
 
 
-def save_timestamps(timestamps, dff_traces, lims_data):
+def get_corrected_fluorescence_traces(roi_metrics, lims_data):
+    file_path = os.path.join(get_ophys_experiment_dir(lims_data), 'demix', str(get_lims_id(lims_data)) + '_demixed_traces.h5')
+    g = h5py.File(file_path)
+    corrected_fluorescence_traces = np.asarray(g['data'])
+    valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
+    corrected_fluorescence_traces = corrected_fluorescence_traces[valid_roi_indices]
+    return corrected_fluorescence_traces
+
+
+def save_corrected_fluorescence_traces(corrected_fluorescence_traces, roi_metrics, lims_data):
+    traces_path = os.path.join(get_analysis_dir(lims_data), 'corrected_fluorescence_traces.h5')
+    f = h5py.File(traces_path, 'w')
+    for i, index in enumerate(get_cell_specimen_ids(roi_metrics)):
+        f.create_dataset(str(index), data=corrected_fluorescence_traces[i])
+    f.close()
+
+
+def get_neuropil_traces(roi_metrics, lims_data):
+    file_path = os.path.join(get_processed_dir(lims_data), 'neuropil_traces.h5')
+    g = h5py.File(file_path)
+    neuropil_traces = np.asarray(g['data'])
+    valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
+    neuropil_traces = neuropil_traces[valid_roi_indices]
+    return neuropil_traces
+
+
+def save_neuropil_traces(neuropil_traces, roi_metrics, lims_data):
+    traces_path = os.path.join(get_analysis_dir(lims_data), 'neuropil_traces.h5')
+    f = h5py.File(traces_path, 'w')
+    for i, index in enumerate(get_cell_specimen_ids(roi_metrics)):
+        f.create_dataset(str(index), data=neuropil_traces[i])
+    f.close()
+
+
+def save_timestamps(timestamps, dff_traces, roi_metrics, lims_data):
     # remove spurious frames at end of ophys session - known issue with Scientifica data
     if dff_traces.shape[1] < timestamps['ophys_frames']['timestamps'].shape[0]:
         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
@@ -501,7 +583,6 @@ def save_timestamps(timestamps, dff_traces, lims_data):
         print('length of ophys timestamps <  length of traces by', str(difference),
               'frames , truncating traces')
         dff_traces = dff_traces[:, :timestamps['ophys_frames']['timestamps'].shape[0]]
-        roi_metrics = get_roi_metrics(lims_data)
         save_dff_traces(dff_traces, roi_metrics, lims_data)
     # make sure length of timestamps equals length of running traces
     # running_speed = core_data['running'].speed.values
@@ -538,22 +619,66 @@ def save_max_projection(max_projection, lims_data):
                  cmap='gray')
 
 
-def get_roi_validation(lims_data):
-    roi_validation = plot_roi_validation(lims_data)
-    return roi_validation
+def get_average_image(lims_data):
+    average_image = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'avgInt_a1X.png'))
+    return average_image
 
 
-def save_roi_validation(roi_validation, lims_data):
+def save_average_image(average_image, lims_data):
+    analysis_dir = get_analysis_dir(lims_data)
+    save_data_as_h5(average_image, 'average_image', analysis_dir)
+    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'average_image.png'), arr=average_image,
+                 cmap='gray')
+
+
+def run_roi_validation(lims_data):
+
+    processed_dir = get_processed_dir(lims_data)
+    file_path = os.path.join(processed_dir, 'roi_traces.h5')
+
+    with h5py.File(file_path) as g:
+        roi_traces = np.asarray(g['data'])
+        roi_names = np.asarray(g['roi_names'])
+
+    experiment_dir = get_ophys_experiment_dir(lims_data)
+    lims_id = get_lims_id(lims_data)
+
+    dff_path = os.path.join(experiment_dir, str(lims_id) + '_dff.h5')
+
+    with h5py.File(dff_path) as f:
+        dff_traces_original = np.asarray(f['data'])
+
+    roi_df = get_roi_locations(lims_data)
+    roi_metrics, unfiltered_roi_metrics = get_roi_metrics(lims_data)
+    roi_masks = get_roi_masks(roi_metrics, lims_data)
+    dff_traces, roi_metrics = get_dff_traces(roi_metrics, lims_data)
+    cell_specimen_ids = get_cell_specimen_ids(roi_metrics)
+    max_projection = get_max_projection(lims_data)
+
+    cell_indices = {id: get_cell_index_for_cell_specimen_id(id, cell_specimen_ids) for id in cell_specimen_ids}
+
+    return roi_names, roi_df, roi_traces, dff_traces_original, cell_specimen_ids, cell_indices, roi_masks, max_projection, dff_traces
+
+
+def get_roi_validation(lims_data,save_plots=False):
+
     analysis_dir = get_analysis_dir(lims_data)
 
-    for roi in roi_validation:
-        fig = roi['fig']
-        index = roi['index']
-        id = roi['id']
-        cell_index = roi['cell_index']
+    roi_names, roi_df, roi_traces, dff_traces_original, cell_specimen_ids, cell_indices, roi_masks, max_projection, dff_traces = run_roi_validation(lims_data)
 
-        save_figure(fig, (20, 10), analysis_dir, 'roi_validation',
-                    str(index) + '_' + str(id) + '_' + str(cell_index))
+    roi_validation = plot_roi_validation(
+        roi_names,
+        roi_df,
+        roi_traces,
+        dff_traces_original,
+        cell_specimen_ids,
+        cell_indices,
+        roi_masks,
+        max_projection,
+        dff_traces,
+    )
+
+    return roi_validation
 
 
 def convert_level_1_to_level_2(lims_id, cache_dir=None):
@@ -581,16 +706,24 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     # stimulus_template, stimulus_metadata = get_visual_stimulus_data(pkl)
     # save_visual_stimulus_data(stimulus_template, stimulus_metadata, lims_data)
 
-    roi_metrics = get_roi_metrics(lims_data)
-    save_roi_metrics(roi_metrics, lims_data)
+    roi_metrics, unfiltered_roi_metrics = get_roi_metrics(lims_data)
+
+    dff_traces, roi_metrics = get_dff_traces(roi_metrics, lims_data)
+    save_dff_traces(dff_traces, roi_metrics, lims_data)
 
     roi_masks = get_roi_masks(roi_metrics, lims_data)
     save_roi_masks(roi_masks, lims_data)
 
-    dff_traces = get_dff_traces(roi_metrics, lims_data)
-    save_dff_traces(dff_traces, roi_metrics, lims_data)
+    save_roi_metrics(roi_metrics, lims_data)
+    save_unfiltered_roi_metrics(unfiltered_roi_metrics, lims_data)
 
-    save_timestamps(timestamps, dff_traces, lims_data)
+    corrected_fluorescence_traces = get_corrected_fluorescence_traces(roi_metrics, lims_data)
+    save_corrected_fluorescence_traces(corrected_fluorescence_traces, roi_metrics, lims_data)
+
+    neuropil_traces = get_neuropil_traces(roi_metrics, lims_data)
+    save_neuropil_traces(neuropil_traces, roi_metrics, lims_data)
+
+    save_timestamps(timestamps, dff_traces, roi_metrics, lims_data)
 
     motion_correction = get_motion_correction(lims_data)
     save_motion_correction(motion_correction, lims_data)
@@ -601,8 +734,11 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     # import matplotlib
     # matplotlib.use('Agg')
 
-    roi_validation = get_roi_validation(lims_data)
-    save_roi_validation(roi_validation, lims_data)
+    average_image = get_average_image(lims_data)
+    save_average_image(average_image, lims_data)
+
+    # roi_validation = get_roi_validation(lims_data)
+    # save_roi_validation(roi_validation, lims_data)
     print('done converting')
     #
     # ophys_data = core_data.update(
@@ -624,25 +760,14 @@ if __name__ == '__main__':
     # import sys
     #
     # experiment_id = sys.argv[1]
-    # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
-    # # cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
-    # # cache_dir = r'/allen/aibs/informatics/swdb2018/visual_behavior'
-    # # experiment_id = 742828820
+    # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/opc/opc_analysis'
     # ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir)
 
-    # import pandas as pd
-    #
-    experiment_ids = [746270939, 746271249,
-                      750534428, 752473496,
-                      746271665, 750845430,
-                      750846019, 752473630,
-                      ]
-    # experiment_id = 746271249
-    experiment_id = 752473630
-
+    experiment_ids = [746270939, 746271249, 750534428, 752473496, 755645715,
+                754579284, 755000515, 755646041, 756118440,
+                746271665, 750845430, 750846019, 752473630,
+                755645219, 756118288, 758305436, 759037671]
 
     cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis'
-    convert_level_1_to_level_2(experiment_id, cache_dir=cache_dir)
-    # df = pd.read_csv(manifest)
-    # for i, experiment_id in enumerate(df.experiment_id.values):
-    #     ophys_data = convert_level_1_to_level_2(int(experiment_id), cache_dir=cache_dir)
+    for experiment_id in experiment_ids[::-1]:
+        ophys_data = convert_level_1_to_level_2(int(experiment_id), cache_dir=cache_dir)

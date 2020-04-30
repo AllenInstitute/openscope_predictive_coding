@@ -124,8 +124,8 @@ def calculate_delay(sync_data, stim_vsync_fall, sample_frequency):
 
 def get_sync_data(lims_id):
     logger.info('getting sync data')
-    from visual_behavior.ophys.sync.sync_dataset import Dataset
-    import visual_behavior.ophys.io.convert_level_1_to_level_2 as io
+    from openscope_predictive_coding.ophys.sync.sync_dataset import Dataset
+    from openscope_predictive_coding.ophys.io import convert_level_1_to_level_2 as io
     sync_path = io.get_sync_path(lims_id)
     sync_dataset = Dataset(sync_path)
     meta_data = sync_dataset.meta_data

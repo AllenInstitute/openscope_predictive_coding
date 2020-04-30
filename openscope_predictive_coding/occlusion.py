@@ -106,7 +106,7 @@ def get_occlusion_data_metadata(img_num_list, src_image_data, seed=0, metadata=T
                 curr_mask = occluded_img_gray
                 curr_mast_warp = 1.-linear_transform_image(apply_warp_natural_scene(curr_mask), (0.,254.))
 
-                print curr_fraction, 'num_dots: %s' % num_dots, 'img_num: %s' % img_num, 'repeat_ii: %s' % repeat_ii
+                print(curr_fraction, 'num_dots: %s' % num_dots, 'img_num: %s' % img_num, 'repeat_ii: %s' % repeat_ii)
 
                 final_image = (img_lummatched[img_num,:,:] - 127.)*curr_mast_warp[::2,::2] + 127.
                 img_list.append({'image': final_image,

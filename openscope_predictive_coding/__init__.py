@@ -3,7 +3,7 @@ import numpy as np
 
 data_path = os.path.join(os.path.dirname(__file__), 'data')
 stimtable_path = os.path.join(os.path.dirname(__file__), 'scripts', 'ophys')
-boc_path = '/home/nicholasc/boc'
+boc_path = '/home/marinag/boc'
 
 SEQUENCE_IMAGES = {}
 SEQUENCE_IMAGES['A'] = (68, 78, 13, 26)
@@ -47,4 +47,4 @@ OCCLUSION_NUM_DOT_to_FRACTION = {0:0., 20:.15, 44:.3, 66:.4, 100:.5, 136:.6}
 for key in OCCLUSION_NUM_DOT_to_FRACTION:
     assert key in OCCLUSION_NUM_DOT_LIST
 
-import stimulus
+from . import stimulus
