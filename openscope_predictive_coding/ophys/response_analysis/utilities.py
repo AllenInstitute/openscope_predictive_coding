@@ -54,8 +54,8 @@ def ptest(x, num_conditions):
 def get_mean_sem_trace(group):
     mean_response = np.mean(group['mean_response'])
     sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
-    mean_trace = np.mean(group['dff_trace'])
-    sem_trace = np.std(group['dff_trace'].values) / np.sqrt(len(group['dff_trace'].values))
+    mean_trace = np.mean(group['trace'])
+    sem_trace = np.std(group['trace'].values) / np.sqrt(len(group['trace'].values))
     return pd.Series({'mean_response': mean_response, 'sem_response': sem_response,
                       'mean_trace': mean_trace, 'sem_trace': sem_trace})
 

@@ -205,6 +205,8 @@ class ResponseAnalysis(object):
             response_df['second_in_sequence'] = [
                 True if response_df.iloc[row].stimulus_key[1] == response_df.iloc[row].image_id else False
                 for row in range(0, len(response_df))]
+        if 'dff_trace' in response_df.keys():
+            response_df = response_df.rename(columns={'dff_trace':'trace', 'dff_trace_timestamps':'trace_timestamps'})
         return response_df
 
     def get_response_df_dict(self):

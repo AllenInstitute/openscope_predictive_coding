@@ -112,7 +112,7 @@ def get_spontaneous_frames(analysis):
         spontaneous_inds (np.array): indices of ophys frames during the spontaneous period
     '''
     ophys_timestamps = analysis.dataset.timestamps_ophys
-    block_df = add_spontaneous_epochs_to_block_df(analysis.get_block_df(), analysis.dataset.timestamps_stimulus)
+    block_df = add_spontaneous_epochs_to_block_df(analysis.dataset.get_stimulus_block_table(), analysis.dataset.timestamps_stimulus)
     spontaneous_blocks = block_df[block_df.block_name == 'spontaneous'].reset_index().drop(columns='index')
 
     row = 0
@@ -255,8 +255,8 @@ def stimulus_response_df(stimulus_response_xr):
     df = pd.DataFrame({
         'stimulus_presentations_id': stacked_traces.coords['stimulus_presentations_id'],
         'cell_specimen_id': stacked_traces.coords['cell_specimen_id'],
-        'dff_trace': list(stacked_traces.data),
-        'dff_trace_timestamps': list(trace_timestamps),
+        'trace': list(stacked_traces.data),
+        'trace_timestamps': list(trace_timestamps),
         'mean_response': stacked_response.data,
         'baseline_response': stacked_baseline.data,
         'p_value': stacked_pval
