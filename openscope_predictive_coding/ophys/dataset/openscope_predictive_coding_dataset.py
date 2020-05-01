@@ -131,6 +131,23 @@ class OpenScopePredictiveCodingDataset(object):
         return self.stimulus_name
     stimulus_name = LazyLoadable('_stimulus_name', get_stimulus_name)
 
+
+    def get_stimulus_block_table(self):
+        gb = self.stimulus_table.groupby('session_block_name')
+        mins = gb.apply(lambda x: x['start_frame'].min())
+        maxs = gb.apply(lambda x: x['start_frame'].max())
+        block_df = pd.DataFrame()
+        block_df['block_name'] = mins.keys()
+        block_df['start_frame'] = mins.values
+        block_df['end_frame'] = maxs.values
+        block_df['start_time'] = [self.timestamps_stimulus[frame] for frame in block_df.start_frame.values]
+        block_df['end_time'] = [self.timestamps_stimulus[frame] for frame in block_df.end_frame.values]
+        block_df.to_hdf(os.path.join(self.analysis_dir, 'block_df.h5'), key='df')
+        self._stimulus_block_table = block_df
+        return self._stimulus_block_table
+    stimulus_block_table = LazyLoadable('_stimulus_block_table', get_stimulus_block_table)
+
+
     # def get_stimulus_template(self):
     #     with h5py.File(os.path.join(self.analysis_dir, 'stimulus_template.h5'), 'r') as stimulus_template_file:
     #         self._stimulus_template = np.asarray(stimulus_template_file['data'])
@@ -156,6 +173,8 @@ class OpenScopePredictiveCodingDataset(object):
             dff_traces = pd.DataFrame(columns=['dff'], index = dff_traces_file.keys())
             for key in dff_traces_file.keys():
                 dff_traces.at[key, 'dff'] = np.asarray(dff_traces_file[key])
+            dff_traces.index = [int(cell_specimen_id) for cell_specimen_id in dff_traces.index.values]
+            dff_traces.index.name = 'cell_specimen_id'
         self._dff_traces = dff_traces
         return self._dff_traces
     dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
@@ -293,6 +312,17 @@ class OpenScopePredictiveCodingDataset(object):
     def get_cell_index_for_cell_specimen_id(self, cell_specimen_id):
         return np.where(self.cell_specimen_ids == cell_specimen_id)[0][0]
 
+    def get_stimulus_template(self):
+        import openscope_predictive_coding.ophys.dataset.stimulus_processing as sp
+        stimulus_table = self.stimulus_table[self.stimulus_table.session_block_name == 'randomized_control_pre']
+        stimulus_template = {}
+        for image_id in stimulus_table.image_id.unique():
+            stimulus_template[int(image_id)] = sp.get_image_array(image_id, self.cache_dir)
+        self._stimulus_template = stimulus_template
+        return self._stimulus_template
+    stimulus_template = LazyLoadable('_stimulus_template', get_stimulus_template)
+
+
     @classmethod
     def construct_and_load(cls, experiment_id, cache_dir=None, **kwargs):
         ''' Instantiate a VisualBehaviorOphysDataset and load its data
@@ -315,6 +345,7 @@ class OpenScopePredictiveCodingDataset(object):
         obj.get_timestamps_stimulus()
         obj.get_stimulus_table()
         obj.get_stimulus_name()
+        obj.get_stimulus_block_table()
         # obj.get_stimulus_template()
         # obj.get_stimulus_metadata()
         obj.get_running_speed()
