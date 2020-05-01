@@ -43,48 +43,12 @@ class ResponseAnalysis(object):
         self.ophys_frame_rate = self.dataset.metadata['ophys_frame_rate'].values[0]
         self.stimulus_frame_rate = self.dataset.metadata['stimulus_frame_rate'].values[0]
 
-        self.get_block_df()
         self.get_image_ids()
         self.get_oddball_images()
         self.get_sequence_images()
         if preload_response_dfs:
             self.get_response_df_dict()
 
-
-    def get_block_df(self):
-        gb = self.dataset.stimulus_table.groupby('session_block_name')
-        mins = gb.apply(lambda x: x['start_frame'].min())
-        maxs = gb.apply(lambda x: x['start_frame'].max())
-        block_df = pd.DataFrame()
-        block_df['block_name'] = mins.keys()
-        block_df['start_frame'] = mins.values
-        block_df['end_frame'] = maxs.values
-        block_df['start_time'] = [self.dataset.timestamps_stimulus[frame] for frame in block_df.start_frame.values]
-        block_df['end_time'] = [self.dataset.timestamps_stimulus[frame] for frame in block_df.end_frame.values]
-        block_df.to_hdf(os.path.join(self.dataset.analysis_dir, 'block_df.h5'), key='df')
-        self.block_df = block_df
-        return self.block_df
-
-    def add_spontaneous_epochs_to_block_df(self):
-        block_df = self.get_block_df()
-        block_df.sort_values(axis=0, by='start_frame', inplace=True)
-        block_df = block_df.reset_index().drop(columns='index')
-        new_block_df = pd.DataFrame(columns=block_df.columns)
-        i = 0
-        for row in range(len(block_df))[:-1]:
-            new_block_df.loc[i] = block_df.loc[row].values
-            start_frame = block_df.iloc[row].end_frame
-            if row == len(block_df) - 1:
-                end_frame = len(dataset.timestamps_stimulus)
-            else:
-                end_frame = block_df.iloc[row + 1].start_frame
-            start_time = dataset.timestamps_stimulus[start_frame]
-            end_time = dataset.timestamps_stimulus[end_frame]
-            data = ['spontaneous', start_frame, end_frame, start_time, end_time]
-            i += 1
-            new_block_df.loc[i] = data
-            i += 1
-        return new_block_df
 
     def get_sequence_images(self):
         stimulus_table = self.dataset.stimulus_table.copy()
@@ -132,7 +96,7 @@ class ResponseAnalysis(object):
         block = stimulus_table[stimulus_table.session_block_name == session_block_name]
         sequence_images = self.get_sequence_images()
         # label oddball images
-        block['oddball'] = False
+        block.at[:,'oddball'] = False
         indices = block[block.image_id.isin(sequence_images) == False].index
         block.at[indices, 'oddball'] = True
         if session_block_name == 'oddball':
@@ -141,7 +105,7 @@ class ResponseAnalysis(object):
             indices = block[block.image_id.isin([block.image_id.values[0]]) == True].index
             block.at[indices, 'sequence_start'] = True
             # label all images of a sequence preceeding a violation frame as True
-            block['violation_sequence'] = False
+            block.at[:,'violation_sequence'] = False
             indices = block[block.oddball == True].index
             block.at[indices, 'violation_sequence'] = True
             block.at[indices - 1, 'violation_sequence'] = True
@@ -165,7 +129,7 @@ class ResponseAnalysis(object):
 
     def generate_response_df(self, session_block_name):
         print('generating response dataframe for', session_block_name, self.suffix)
-        response_xr = get_response_xr(self, session_block_name)
+        response_xr = self.get_response_xr(session_block_name)
         response_df = rp.stimulus_response_df(response_xr)
         return response_df
 
