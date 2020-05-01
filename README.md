@@ -1,4 +1,5 @@
 
-* We are not currently supporting this code, but simply releasing it to the community AS IS but are not able to provide any guarantees of support.  The community is welcome to submit issues, but you should not expect an active response.
+Analysis code for the OpenScope Predictive Coding project
 
+This code is under active development as part of the internal Allen Institute code base. The community is welcome to submit issues, however pull requests might not be accepted if they conflict with our existing plans. 
 
