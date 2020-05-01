@@ -54,8 +54,8 @@ def ptest(x, num_conditions):
 def get_mean_sem_trace(group):
     mean_response = np.mean(group['mean_response'])
     sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
-    mean_trace = np.mean(group['dff_trace'])
-    sem_trace = np.std(group['dff_trace'].values) / np.sqrt(len(group['dff_trace'].values))
+    mean_trace = np.mean(group['trace'])
+    sem_trace = np.std(group['trace'].values) / np.sqrt(len(group['trace'].values))
     return pd.Series({'mean_response': mean_response, 'sem_response': sem_response,
                       'mean_trace': mean_trace, 'sem_trace': sem_trace})
 
@@ -152,23 +152,6 @@ def add_metadata_to_mean_df(mdf, metadata):
     metadata['session_num'] = metadata.session_type.values[0][-1]
     mdf = mdf.merge(metadata, how='outer', on='experiment_id')
     return mdf
-
-
-# def get_gray_response_df(dataset, window=0.5):
-#     window = 0.5
-#     row = []
-#     flashes = dataset.stimulus_table.copy()
-#     stim_duration = dataset.task_parameters.stimulus_duration.values[0]
-#     for cell in range(dataset.dff_traces.shape[0]):
-#         for x,gray_start_time in enumerate(flashes.end_time[:-5]): #exclude the last 5 frames to prevent truncation of traces
-#             ophys_start_frame = int(np.nanargmin(abs(dataset.timestamps_ophys - gray_start_time)))
-#             ophys_end_time = gray_start_time + int(dataset.metadata.ophys_frame_rate.values[0] * 0.5)
-#             gray_end_time = gray_start_time + window
-#             ophys_end_frame = int(np.nanargmin(abs(dataset.timestamps_ophys - ophys_end_time)))
-#             mean_response = np.mean(dataset.dff_traces[cell][ophys_start_frame:ophys_end_frame])
-#             row.append([cell, x, gray_start_time, gray_end_time, mean_response])
-#     gray_response_df = pd.DataFrame(data=row, columns=['cell', 'gray_number', 'gray_start_time', 'gray_end_time', 'mean_response'])
-#     return gray_response_df
 
 
 def add_repeat_to_stimulus_table(stimulus_table):
