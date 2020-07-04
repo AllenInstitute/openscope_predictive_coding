@@ -220,17 +220,40 @@ def stimulus_response_xr(analysis, stimulus_block, response_analysis_params=None
     mean_baseline = eventlocked_traces_xr.loc[
         {'eventlocked_timestamps': slice(*baseline_range)}
     ].mean(['eventlocked_timestamps'])
-
+    
+    max_response = eventlocked_traces_xr.loc[
+        {'eventlocked_timestamps': slice(*response_range)}
+    ].max(['eventlocked_timestamps'])
+    
     p_values = get_p_value_from_shuffled_spontaneous(analysis,
-                                                     mean_response,
-                                                     traces,
-                                                     response_analysis_params['response_window_duration_seconds'])
-    result = xr.Dataset({
-        'eventlocked_traces': eventlocked_traces_xr,
-        'mean_response': mean_response,
-        'mean_baseline': mean_baseline,
-        'p_value': p_values
-    })
+                                                 mean_response,
+                                                 traces,
+                                                 response_analysis_params['response_window_duration_seconds'])
+        
+    #Sum the number of deconvolved events
+    if use_events:
+        summed_events = eventlocked_traces_xr.loc[
+            {'eventlocked_timestamps': slice(*response_range)}
+        ].sum(['eventlocked_timestamps'])
+        
+        result = xr.Dataset({
+            'eventlocked_traces': eventlocked_traces_xr,
+            'summed_events': summed_events,
+            'mean_response': mean_response,
+            'mean_baseline': mean_baseline,
+            'p_value': p_values
+        })
+        
+    else:
+        
+        result = xr.Dataset({
+            'eventlocked_traces': eventlocked_traces_xr,
+            'max_response': max_response,
+            'mean_response': mean_response,
+            'mean_baseline': mean_baseline,
+            'p_value': p_values
+        })
+    
 
     return result
 

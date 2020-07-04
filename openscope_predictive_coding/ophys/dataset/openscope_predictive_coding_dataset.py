@@ -211,7 +211,7 @@ class OpenScopePredictiveCodingDataset(object):
         if os.path.exists(events_folder):
             events_file = [file for file in os.listdir(events_folder) if str(self.experiment_id) + '_events.npz' in file]
             if len(events_file) > 0:
-                print('getting L0 events')
+#                 print('getting L0 events')
                 f = np.load(os.path.join(events_folder, events_file[0]))
                 events = np.asarray(f['ev'])
                 ## put smoothing here? ##

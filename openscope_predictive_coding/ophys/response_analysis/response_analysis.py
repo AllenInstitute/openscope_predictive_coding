@@ -80,10 +80,12 @@ class ResponseAnalysis(object):
         :param session_block_name:
         :return:
         """
+        
+        #Stimulus Duration changed by D. Wyrick
         if session_block_name == 'oddball':
-            stimulus_duration = 0.23
+            stimulus_duration = 0.25
         elif 'control' in session_block_name:
-            stimulus_duration = 0.23
+            stimulus_duration = 0.25
         elif 'movie' in session_block_name:
             stimulus_duration = 30.
         elif 'occlusion' in session_block_name:
@@ -121,9 +123,16 @@ class ResponseAnalysis(object):
         return block
 
     def get_response_xr(self, session_block_name):
+        stimulus_duration = self.get_stimulus_duration(session_block_name)
+        stimulus_response_params = {
+                "window_around_timepoint_seconds": [0, 0.5],
+                "response_window_duration_seconds": stimulus_duration,
+                "baseline_window_duration_seconds": stimulus_duration
+            }
         stimulus_block = self.get_stimulus_block(session_block_name)
-        print('generating response xarray for', session_block_name, self.suffix)
-        response_xr = rp.stimulus_response_xr(self, stimulus_block, response_analysis_params=None, use_events=self.use_events)
+#         import pdb; pdb.set_trace()
+#         print('generating response xarray for', session_block_name, self.suffix)
+        response_xr = rp.stimulus_response_xr(self, stimulus_block, response_analysis_params=stimulus_response_params, use_events=self.use_events)
         response_df = rp.stimulus_response_df(response_xr)
         return response_xr
 
