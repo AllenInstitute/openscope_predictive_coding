@@ -219,3 +219,20 @@ def add_early_late_block_ratio_for_fdf(fdf, repeat=1, pref_stim=True):
         data.loc[indices,'early_late_block_index'] = index
         data.loc[indices,'early_late_block_ratio'] = ratio
     return data
+
+
+def add_retrogradely_labeled_column_to_df(df, cache_dir=None):
+    """
+    takes any dataframe with a column for 'cell_specimen_id' and adds a new column called 'retrogradely_labeled' which is a boolean for whether the cell was tagged or not
+    """
+    if cache_dir is None:
+        # cache_dir = r'C:\Users\marinag\Dropbox\opc_analysis'
+        cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis'
+    red_label_df = pd.read_hdf(os.path.join(cache_dir, 'multi_session_summary_dfs', 'red_label_df.h5'), key='df')
+    red_label_df.reset_index(inplace=True)
+    red_label_df['cell_specimen_id'] = [int(cell_specimen_id) for cell_specimen_id in red_label_df.cell_specimen_id.values]
+    red_df = red_label_df[['cell_specimen_id', 'retrogradely_labeled']]
+    df = pd.merge(df, red_df, left_on='cell_specimen_id', right_on='cell_specimen_id')
+    return df
+
+
