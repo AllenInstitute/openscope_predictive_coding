@@ -125,7 +125,7 @@ class ResponseAnalysis(object):
     def get_response_xr(self, session_block_name):
         stimulus_duration = self.get_stimulus_duration(session_block_name)
         stimulus_response_params = {
-                "window_around_timepoint_seconds": [0, 0.5],
+                "window_around_timepoint_seconds": [-0.5, 0.5],
                 "response_window_duration_seconds": stimulus_duration,
                 "baseline_window_duration_seconds": stimulus_duration
             }

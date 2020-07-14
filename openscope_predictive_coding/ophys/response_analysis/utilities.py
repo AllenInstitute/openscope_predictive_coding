@@ -53,11 +53,12 @@ def ptest(x, num_conditions):
 
 def get_mean_sem_trace(group):
     mean_response = np.mean(group['mean_response'])
+    mean_responses = group['mean_response'].values
     sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
     mean_trace = np.mean(group['trace'])
     sem_trace = np.std(group['trace'].values) / np.sqrt(len(group['trace'].values))
     return pd.Series({'mean_response': mean_response, 'sem_response': sem_response,
-                      'mean_trace': mean_trace, 'sem_trace': sem_trace})
+                      'mean_trace': mean_trace, 'sem_trace': sem_trace, 'mean_responses': mean_responses})
 
 
 def annotate_trial_response_df_with_pref_stim(trial_response_df):
@@ -128,7 +129,7 @@ def get_mean_df(response_df, conditions=['cell_specimen_id', 'image_id']):
     rdf = response_df.copy()
 
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
-    mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace']]
+    mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'mean_responses']]
     mdf = mdf.reset_index()
     if 'image_id' in mdf.keys():
         mdf = annotate_mean_df_with_pref_stim(mdf)
@@ -149,7 +150,7 @@ def add_metadata_to_mean_df(mdf, metadata):
     metadata = metadata.rename(columns={'ophys_experiment_id': 'experiment_id'})
     metadata = metadata.drop(columns=['ophys_frame_rate', 'stimulus_frame_rate', 'index'])
     metadata['experiment_id'] = [int(experiment_id) for experiment_id in metadata.experiment_id]
-    metadata['session_num'] = metadata.session_type.values[0][-1]
+    # metadata['session_num'] = metadata.session_type.values[0][-1]
     mdf = mdf.merge(metadata, how='outer', on='experiment_id')
     return mdf
 
