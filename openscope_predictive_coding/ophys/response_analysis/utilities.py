@@ -237,3 +237,50 @@ def add_retrogradely_labeled_column_to_df(df, cache_dir=None):
     return df
 
 
+def get_manifest(cache_dir=None):
+    """
+    Loads experiment manifest file as a dataframe, listing all experiments and associated metadata
+    """
+    if cache_dir is None:
+        # cache_dir = r'C:\Users\marinag\Dropbox\opc_analysis'
+        cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis'
+    manifest_file = os.path.join(cache_dir, 'opc_production_manifest.xlsx')
+    manifest = pd.read_excel(manifest_file)
+    return manifest
+
+
+def add_projection_pathway_to_df(df, cache_dir=None):
+    """
+    df: dataframe to add projection pathway information to. Dataframe must have a column 'experiment_id'.
+    cache_dir: cache directory to load manifest from
+
+    Adds columns called 'injection_area', the brain area where the retrograde tracer was injected,
+    and 'projection_pathway', indicating whether retrogradely labeled cells are part of a feed forward ('FF') or feed back ('FB') pathway,
+    to experiment manifest table, then merges in with provided dataframe.
+    """
+    manifest = get_manifest(cache_dir)
+    manifest['projection_pathway'] = np.nan
+    manifest.at[manifest[manifest.injection_area == 'RSP'].index.values, 'projection_pathway'] = 'FF'
+    manifest.at[manifest[manifest.injection_area == 'VISp'].index.values, 'projection_pathway'] = 'FB'
+    manifest.at[manifest[(manifest.imaging_area == 'VISpm') & (
+    manifest.injection_area == 'RSP')].index.values, 'projection_pathway'] = 'FF'
+    manifest.at[manifest[(manifest.imaging_area == 'VISpm') & (
+    manifest.injection_area == 'VISp')].index.values, 'projection_pathway'] = 'FB'
+    df = df.merge(manifest[['experiment_id', 'injection_area', 'pathway']], on='experiment_id')
+    return data
+
+
+def add_location_to_df(df):
+    """
+    df: dataframe containing columns 'targeted_structure' and 'imaging_depth', such as the manifest table or multi_session_summary_dfs
+    Add useful columns, including 'depth' which translates 'imaging_depth' integer values in um to a string indicating superficial or deep layers,
+    and 'location', a string combining the imaged area and the 'depth' string as a way to easily group data by both area and depth for analysis.
+    """
+    df['area'] = df.targeted_structure.values
+    df['depth'] = ['deep' if depth > 250 else 'superficial' for depth in df.imaging_depth.values]
+    df['location'] = None
+    df['location'] = [df.iloc[row].area+'_'+df.iloc[row].depth for row in range(len(df))]
+    return df
+
+
+
