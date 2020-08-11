@@ -224,36 +224,25 @@ def stimulus_response_xr(analysis, stimulus_block, response_analysis_params=None
     max_response = eventlocked_traces_xr.loc[
         {'eventlocked_timestamps': slice(*response_range)}
     ].max(['eventlocked_timestamps'])
+
+    summed_response = eventlocked_traces_xr.loc[
+        {'eventlocked_timestamps': slice(*response_range)}
+    ].sum(['eventlocked_timestamps'])
     
     p_values = get_p_value_from_shuffled_spontaneous(analysis,
                                                  mean_response,
                                                  traces,
                                                  response_analysis_params['response_window_duration_seconds'])
         
-    #Sum the number of deconvolved events
-    if use_events:
-        summed_events = eventlocked_traces_xr.loc[
-            {'eventlocked_timestamps': slice(*response_range)}
-        ].sum(['eventlocked_timestamps'])
-        
-        result = xr.Dataset({
-            'eventlocked_traces': eventlocked_traces_xr,
-            'summed_events': summed_events,
-            'mean_response': mean_response,
-            'mean_baseline': mean_baseline,
-            'p_value': p_values
-        })
-        
-    else:
-        
-        result = xr.Dataset({
-            'eventlocked_traces': eventlocked_traces_xr,
-            'max_response': max_response,
-            'mean_response': mean_response,
-            'mean_baseline': mean_baseline,
-            'p_value': p_values
-        })
-    
+
+
+    result = xr.Dataset({
+        'eventlocked_traces': eventlocked_traces_xr,
+        'summed_response': summed_response,
+        'mean_response': mean_response,
+        'mean_baseline': mean_baseline,
+        'p_value': p_values
+    })
 
     return result
 
@@ -263,11 +252,13 @@ def stimulus_response_df(stimulus_response_xr):
     '''
     traces = stimulus_response_xr['eventlocked_traces']
     mean_response = stimulus_response_xr['mean_response']
+    summed_response = stimulus_response_xr['summed_response']
     mean_baseline = stimulus_response_xr['mean_baseline']
     p_vals = stimulus_response_xr['p_value']
     stacked_traces = traces.stack(multi_index=('stimulus_presentations_id', 'cell_specimen_id')).transpose()
     stacked_response = mean_response.stack(multi_index=('stimulus_presentations_id', 'cell_specimen_id')).transpose()
     stacked_baseline = mean_baseline.stack(multi_index=('stimulus_presentations_id', 'cell_specimen_id')).transpose()
+    stacked_sum = summed_response.stack(multi_index=('stimulus_presentations_id', 'cell_specimen_id')).transpose()
     stacked_pval = p_vals.stack(multi_index=('stimulus_presentations_id', 'cell_specimen_id')).transpose()
 
     num_repeats = len(stacked_traces)
@@ -282,6 +273,7 @@ def stimulus_response_df(stimulus_response_xr):
         'trace_timestamps': list(trace_timestamps),
         'mean_response': stacked_response.data,
         'baseline_response': stacked_baseline.data,
+        'summed_response': stacked_sum.data,
         'p_value': stacked_pval
     })
     return df

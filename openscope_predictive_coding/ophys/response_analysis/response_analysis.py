@@ -26,10 +26,12 @@ class ResponseAnalysis(object):
     If False, will load existing analysis files from dataset.analysis_dir, or generate and save them if none exist.
     """
 
-    def __init__(self, dataset, overwrite_analysis_files=False, preload_response_dfs=False, use_events=False):
+    def __init__(self, dataset, overwrite_analysis_files=False, preload_response_dfs=False, regenerate_dfs=False,
+                 use_events=False):
         self.dataset = dataset
         self.overwrite_analysis_files = overwrite_analysis_files
         self.preload_response_dfs = preload_response_dfs
+        self.regenerate_dfs = regenerate_dfs
         self.use_events = use_events
         if self.use_events:
             self.suffix = '_events'
@@ -125,7 +127,7 @@ class ResponseAnalysis(object):
     def get_response_xr(self, session_block_name):
         stimulus_duration = self.get_stimulus_duration(session_block_name)
         stimulus_response_params = {
-                "window_around_timepoint_seconds": [0, 0.5],
+                "window_around_timepoint_seconds": [-0.5, 0.5],
                 "response_window_duration_seconds": stimulus_duration,
                 "baseline_window_duration_seconds": stimulus_duration
             }
@@ -160,6 +162,9 @@ class ResponseAnalysis(object):
                 os.remove(self.get_response_df_path(session_block_name))
             response_df = self.generate_response_df(session_block_name)
             self.save_response_df(response_df, session_block_name)
+        elif self.regenerate_dfs:
+            print('generating df for', session_block_name)
+            response_df = self.generate_response_df(session_block_name)
         else:
             if os.path.exists(self.get_response_df_path(session_block_name)):
                 try:
