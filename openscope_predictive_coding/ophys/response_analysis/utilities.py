@@ -53,11 +53,12 @@ def ptest(x, num_conditions):
 
 def get_mean_sem_trace(group):
     mean_response = np.mean(group['mean_response'])
+    mean_responses = group['mean_response'].values
     sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
     mean_trace = np.mean(group['trace'])
     sem_trace = np.std(group['trace'].values) / np.sqrt(len(group['trace'].values))
     return pd.Series({'mean_response': mean_response, 'sem_response': sem_response,
-                      'mean_trace': mean_trace, 'sem_trace': sem_trace})
+                      'mean_trace': mean_trace, 'sem_trace': sem_trace, 'mean_responses': mean_responses})
 
 
 def annotate_trial_response_df_with_pref_stim(trial_response_df):
@@ -128,7 +129,7 @@ def get_mean_df(response_df, conditions=['cell_specimen_id', 'image_id']):
     rdf = response_df.copy()
 
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
-    mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace']]
+    mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'mean_responses']]
     mdf = mdf.reset_index()
     if 'image_id' in mdf.keys():
         mdf = annotate_mean_df_with_pref_stim(mdf)
@@ -149,7 +150,7 @@ def add_metadata_to_mean_df(mdf, metadata):
     metadata = metadata.rename(columns={'ophys_experiment_id': 'experiment_id'})
     metadata = metadata.drop(columns=['ophys_frame_rate', 'stimulus_frame_rate', 'index'])
     metadata['experiment_id'] = [int(experiment_id) for experiment_id in metadata.experiment_id]
-    metadata['session_num'] = metadata.session_type.values[0][-1]
+    # metadata['session_num'] = metadata.session_type.values[0][-1]
     mdf = mdf.merge(metadata, how='outer', on='experiment_id')
     return mdf
 
@@ -219,3 +220,67 @@ def add_early_late_block_ratio_for_fdf(fdf, repeat=1, pref_stim=True):
         data.loc[indices,'early_late_block_index'] = index
         data.loc[indices,'early_late_block_ratio'] = ratio
     return data
+
+
+def add_retrogradely_labeled_column_to_df(df, cache_dir=None):
+    """
+    takes any dataframe with a column for 'cell_specimen_id' and adds a new column called 'retrogradely_labeled' which is a boolean for whether the cell was tagged or not
+    """
+    if cache_dir is None:
+        # cache_dir = r'C:\Users\marinag\Dropbox\opc_analysis'
+        cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis'
+    red_label_df = pd.read_hdf(os.path.join(cache_dir, 'multi_session_summary_dfs', 'red_label_df.h5'), key='df')
+    red_label_df.reset_index(inplace=True)
+    red_label_df['cell_specimen_id'] = [int(cell_specimen_id) for cell_specimen_id in red_label_df.cell_specimen_id.values]
+    red_df = red_label_df[['cell_specimen_id', 'retrogradely_labeled']]
+    df = pd.merge(df, red_df, left_on='cell_specimen_id', right_on='cell_specimen_id')
+    return df
+
+
+def get_manifest(cache_dir=None):
+    """
+    Loads experiment manifest file as a dataframe, listing all experiments and associated metadata
+    """
+    if cache_dir is None:
+        # cache_dir = r'C:\Users\marinag\Dropbox\opc_analysis'
+        cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis'
+    manifest_file = os.path.join(cache_dir, 'opc_production_manifest.xlsx')
+    manifest = pd.read_excel(manifest_file)
+    return manifest
+
+
+def add_projection_pathway_to_df(df, cache_dir=None):
+    """
+    df: dataframe to add projection pathway information to. Dataframe must have a column 'experiment_id'.
+    cache_dir: cache directory to load manifest from
+
+    Adds columns called 'injection_area', the brain area where the retrograde tracer was injected,
+    and 'projection_pathway', indicating whether retrogradely labeled cells are part of a feed forward ('FF') or feed back ('FB') pathway,
+    to experiment manifest table, then merges in with provided dataframe.
+    """
+    manifest = get_manifest(cache_dir)
+    manifest['projection_pathway'] = np.nan
+    manifest.at[manifest[manifest.injection_area == 'RSP'].index.values, 'projection_pathway'] = 'FF'
+    manifest.at[manifest[manifest.injection_area == 'VISp'].index.values, 'projection_pathway'] = 'FB'
+    manifest.at[manifest[(manifest.imaging_area == 'VISpm') & (
+    manifest.injection_area == 'RSP')].index.values, 'projection_pathway'] = 'FF'
+    manifest.at[manifest[(manifest.imaging_area == 'VISpm') & (
+    manifest.injection_area == 'VISp')].index.values, 'projection_pathway'] = 'FB'
+    df = df.merge(manifest[['experiment_id', 'injection_area', 'pathway']], on='experiment_id')
+    return data
+
+
+def add_location_to_df(df):
+    """
+    df: dataframe containing columns 'targeted_structure' and 'imaging_depth', such as the manifest table or multi_session_summary_dfs
+    Add useful columns, including 'depth' which translates 'imaging_depth' integer values in um to a string indicating superficial or deep layers,
+    and 'location', a string combining the imaged area and the 'depth' string as a way to easily group data by both area and depth for analysis.
+    """
+    df['area'] = df.targeted_structure.values
+    df['depth'] = ['deep' if depth > 250 else 'superficial' for depth in df.imaging_depth.values]
+    df['location'] = None
+    df['location'] = [df.iloc[row].area+'_'+df.iloc[row].depth for row in range(len(df))]
+    return df
+
+
+
