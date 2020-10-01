@@ -24,6 +24,8 @@ def get_multi_session_mean_df(experiment_ids, cache_dir, session_block_name='odd
                 df['second_in_sequence'] = [True if df.iloc[row].stimulus_key[1] == df.iloc[row].image_id else False
                                              for row in range(0, len(df))]
             mdf = ut.get_mean_df(df, conditions=conditions)
+            mdf = ut.add_retrogradely_labeled_column_to_df(mdf, cache_dir)
+            mdf = ut.add_projection_pathway_to_df(mdf, cache_dir)
             mdf['experiment_id'] = dataset.experiment_id
             mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
             mega_mdf = pd.concat([mega_mdf, mdf])
