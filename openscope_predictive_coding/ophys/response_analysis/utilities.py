@@ -246,6 +246,7 @@ def get_manifest(cache_dir=None):
         cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\opc\opc_analysis'
     manifest_file = os.path.join(cache_dir, 'opc_production_manifest.xlsx')
     manifest = pd.read_excel(manifest_file)
+    manifest = manifest[manifest['experiment_state']=='passed']
     return manifest
 
 
@@ -255,19 +256,22 @@ def add_projection_pathway_to_df(df, cache_dir=None):
     cache_dir: cache directory to load manifest from
 
     Adds columns called 'injection_area', the brain area where the retrograde tracer was injected,
-    and 'projection_pathway', indicating whether retrogradely labeled cells are part of a feed forward ('FF') or feed back ('FB') pathway,
-    to experiment manifest table, then merges in with provided dataframe.
+    'imaging_area', where the data was acquired, and 'projection_pathway', indicating whether
+    retrogradely labeled cells are part of a feed forward ('FF') or feed back ('FB') pathway, to the df.
     """
     manifest = get_manifest(cache_dir)
-    manifest['projection_pathway'] = np.nan
-    manifest.at[manifest[manifest.injection_area == 'RSP'].index.values, 'projection_pathway'] = 'FF'
-    manifest.at[manifest[manifest.injection_area == 'VISp'].index.values, 'projection_pathway'] = 'FB'
-    manifest.at[manifest[(manifest.imaging_area == 'VISpm') & (
-    manifest.injection_area == 'RSP')].index.values, 'projection_pathway'] = 'FF'
-    manifest.at[manifest[(manifest.imaging_area == 'VISpm') & (
-    manifest.injection_area == 'VISp')].index.values, 'projection_pathway'] = 'FB'
-    df = df.merge(manifest[['experiment_id', 'injection_area', 'pathway']], on='experiment_id')
-    return data
+    if 'injection_area' not in df.keys():
+        df = df.merge(manifest[['experiment_id', 'imaging_area', 'injection_area']], on='experiment_id')
+    df['projection_pathway'] = np.nan
+    df.at[
+        df[(df.injection_area == 'RSP') & (df.retrogradely_labeled == True)].index.values, 'projection_pathway'] = 'FF'
+    df.at[
+        df[(df.injection_area == 'VISp') & (df.retrogradely_labeled == True)].index.values, 'projection_pathway'] = 'FB'
+    df.at[df[(df.imaging_area == 'VISpm') & (df.injection_area == 'RSP') & (
+    df.retrogradely_labeled == True)].index.values, 'projection_pathway'] = 'FF'
+    df.at[df[(df.imaging_area == 'VISpm') & (df.injection_area == 'VISp') & (
+    df.retrogradely_labeled == True)].index.values, 'projection_pathway'] = 'FB'
+    return df
 
 
 def add_location_to_df(df):
