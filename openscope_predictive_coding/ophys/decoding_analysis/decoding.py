@@ -52,9 +52,73 @@ mainseq_ids = [68, 78, 13, 26]
 oddball_ids = [6, 17, 22, 51, 71, 89, 103, 110, 111, 112]
 transctrl_dict = {68: (68,78), 78: (78,13), 13: (13,26), 26: (26,68)}
 
+
+def get_responses_per_session(manifest,  use_events=True, variable='summed_response'):
+    areanames = ['RSP', 'VISp', 'VISpm']
+    blocks = ['randomized_control_pre','randomized_control_post','transition_control','oddball']
+    
+    randctrl_pop_responses = {'VISp': {}, 'VISpm': {}, 'RSP': {}}
+    transctrl_pop_responses = {'VISp': {}, 'VISpm': {}, 'RSP': {}}
+    oddball_pop_responses = {'VISp': {}, 'VISpm': {}, 'RSP': {}}
+
+    for area in areanames:
+        #Get experimental IDs for area of interest
+        experiment_ids = manifest[(manifest.imaging_area==area)].experiment_id.values
+        print('\n{}: '.format(area))
+        
+        for eID in experiment_ids:
+            ## Temporary Fix: For some reason this experimental ID throws errors for me -D. Wyrick
+            if int(eID) == 848691390:
+                continue
+            print('{}, '.format(int(eID)),end='')
+            ## Load in dataset
+            dataset = OpenScopePredictiveCodingDataset(int(eID), cache_dir)
+
+            #Create analysis object
+            analysis = ResponseAnalysis(dataset, use_events=use_events) 
+
+            # Get stimulus table for all of the presentations for each of the stimulus types
+            stimulus_df = dataset.stimulus_table
+
+            ##========================
+            #Get randomized control pre and post
+            stim_ids = stimulus_df[stimulus_df.session_block_name == 'randomized_control_pre'].index.values
+#             import pdb; pdb.set_trace()
+            #Get response x-array and take deconvolved events
+            xresp = analysis.get_response_xr('randomized_control_pre')
+            randctrl_pre = xresp[variable].loc[stim_ids]
+            
+            stim_ids = stimulus_df[stimulus_df.session_block_name == 'randomized_control_post'].index.values
+
+            #Get response x-array and take deconvolved events
+            xresp = analysis.get_response_xr('randomized_control_post')
+            randctrl_post = xresp[variable].loc[stim_ids]
+
+            #Append this experiments data
+            randctrl_pop_responses[area][eID] = [randctrl_pre,randctrl_post]
+            
+            ##========================
+            #Get oddball block
+            stim_ids = stimulus_df[stimulus_df.session_block_name == 'transition_control'].index.values
+
+            #Get response x-array and take deconvolved events
+            xresp = analysis.get_response_xr('transition_control')
+            transctrl_pop_responses[area][eID] = xresp[variable].loc[stim_ids]
+            
+            ##========================
+            #Get oddball block
+            stim_ids = stimulus_df[stimulus_df.session_block_name == 'oddball'].index.values
+
+            #Get response x-array and take deconvolved events
+            xresp = analysis.get_response_xr('oddball')
+            oddball_pop_responses[area][eID] = xresp[variable].loc[stim_ids]
+                    
+    return randctrl_pop_responses, transctrl_pop_responses, oddball_pop_responses, stimulus_df
+
+
 # variable: 'summed_events' or 'mean_response' when we're using deconvolved events
 #           'max_response' or 'mean_response' when we're using raw dfof
-def create_psuedopopulation(manifest, area, block='None', use_events=True, variable='summed_events'):
+def create_psuedopopulation(manifest, area, block='None', use_events=True, variable='summed_response'):
     
     #Get experimental IDs for area of interest
     experiment_ids = manifest[(manifest.imaging_area==area)].experiment_id.values
@@ -126,7 +190,7 @@ def match_trials(X_responses, stimulus_df, block='oddball', trial_type='ABCD', s
                 if all([stimulus_df.loc[sID-4*ii]['stimulus_key'][-1] == mainseq_ids[-1] for ii in range(4)]):
                     seq_ids_wo_oddballs.append(sID)
             MS_stimIDs = np.array(seq_ids_wo_oddballs)
-            
+
             #Use presentation IDs to select data we're interested in
             X_subset = X_responses.loc[MS_stimIDs[trial_indy]]
             Y_subset = stimulus_df.loc[MS_stimIDs[trial_indy]]['image_id'].values
@@ -167,6 +231,21 @@ def match_trials(X_responses, stimulus_df, block='oddball', trial_type='ABCD', s
             X_subset = X_responses.loc[OB_stimIDs]
             Y_subset = stimulus_df.loc[OB_stimIDs]['image_id'].values
             Y_sort = stimulus_df.loc[OB_stimIDs]['image_id'].values
+            
+            
+        elif trial_type == 'DAXA':
+            #Get DA
+            #Use the oddball stimulus presentation IDs to identify the main sequence image A that occurs after D but before X; DABCX
+            DA_stimIDs = sorted(OB_stimIDs - 3 - 4*seq_dist)
+            
+            #And the A that occurs after X
+            XA_stimIDs = sorted(OB_stimIDs + 1)
+              
+            #Use presentation IDs to select data we're interested in
+            stim_ids = np.concatenate((DA_stimIDs,XA_stimIDs))
+            X_subset = X_responses.loc[stim_ids]
+            Y_subset = np.concatenate((np.repeat(0,len(DA_stimIDs)),np.repeat(1,len(XA_stimIDs))))
+            Y_sort = np.array([stimulus_df.loc[sID - 1]['image_id'] for sID in stim_ids])
             
             
     elif block == 'transition_control':
@@ -275,6 +354,13 @@ def match_trials(X_responses, stimulus_df, block='oddball', trial_type='ABCD', s
             Y_subset = stimulus_df.loc[OB_stimIDs]['image_id'].values
             Y_sort = stimulus_df.loc[OB_stimIDs]['image_id'].values
             
+#     elif block == 'occlusion':
+#         if trial_type == 'X':
+#             X_subset = X_responses.loc[OB_stimIDs]
+#             Y_subset = stimulus_df.loc[OB_stimIDs]['image_id'].values
+            
+#             Y_sort = np.array(['{}/{}'.format(stimulus_df.loc[sID]['image_id'],stimulus_df.loc[sID]['fraction_occlusion']) for sID in OB_stimIDs])
+            
             
     else:
         if trial_type == 'ABCD':
@@ -297,6 +383,7 @@ def match_trials(X_responses, stimulus_df, block='oddball', trial_type='ABCD', s
 
 def decode_labels(X,Y,train_index,test_index,classifier='LDA',clabels=None,X_test=None,Y_test=None,shuffle=True,classifier_kws=None):
     
+    nTrials, nNeurons = X.shape
     #Copy training index for shuffle decoding
     train_index_sh = train_index.copy()
     np.random.shuffle(train_index_sh)
@@ -322,7 +409,8 @@ def decode_labels(X,Y,train_index,test_index,classifier='LDA',clabels=None,X_tes
 
     #Initialize Classifier
     if classifier == 'LDA':
-        clf = LinearDiscriminantAnalysis()
+#         clf = LinearDiscriminantAnalysis()
+        clf = LinearDiscriminantAnalysis(solver='lsqr',shrinkage='auto')
     elif classifier == 'SVM':
         clf = svm.LinearSVC(max_iter=1E6)
 
@@ -346,7 +434,7 @@ def decode_labels(X,Y,train_index,test_index,classifier='LDA',clabels=None,X_tes
                 Rs = [np.corrcoef(PSTH_train[iStim],X_test[iTrial])[0,1] for iStim in range(nClasses)]
                 Y_hat[iTrial] =  class_labels[np.argmax(Rs)]
                 
-            #Just to check whether the classifier correctly decodes the training data
+#             #Just to check whether the classifier correctly decodes the training data
 #         nTrials_train = X_train.shape[0]
 #         Y_hat_train = np.zeros((nTrials_train,),dtype=int)
 #         for iTrial in range(nTrials_train):
@@ -367,26 +455,37 @@ def decode_labels(X,Y,train_index,test_index,classifier='LDA',clabels=None,X_tes
         #Predict test data
         Y_hat = clf.predict(X_test)
         Y_hat_train = clf.predict(X_train)
+        
+        #Get weights
+        decoding_weights = clf.coef_
     
     #Calculate confusion matrix
     kfold_hits = confusion_matrix(Y_test,Y_hat,labels=clabels)
 #     kfold_hits_train = confusion_matrix(Y_train,Y_hat_train,labels=clabels)
-#     print(kfold_hits)
-#     coef = clf.coef_
+#     print(kfold_hits_train)
 #     pdb.set_trace()
 
     ##===== Perform Shuffle decoding =====##
     if shuffle:
         kfold_shf = np.zeros((nShuffles,nClasses,nClasses))
+#         decoding_weights_shf = np.zeros((nShuffles,nNeurons))
+        
         #Classify with shuffled dataset
         for iS in range(nShuffles):
-            #Shuffle training indices
             np.random.shuffle(train_index_sh)
             Y_train_sh = Y[train_index_sh]
-
+#             overlap = 10
+#             while np.abs(overlap) >= 6:
+#                 #Shuffle training indices
+#                 np.random.shuffle(train_index_sh)
+#                 Y_train_sh = Y[train_index_sh]
+#                 print(overlap)
+#                 overlap = np.sum(Y_train == Y_train_sh)-np.sum(Y_train != Y_train_sh)
+#             print('\t -> {}'.format(overlap))
             #Initialize Classifier
             if classifier == 'LDA':
-                clf_shf = LinearDiscriminantAnalysis()
+#                 clf_shf = LinearDiscriminantAnalysis()
+                clf_shf = LinearDiscriminantAnalysis(solver='lsqr',shrinkage='auto')
             elif classifier == 'SVM':
                 clf_shf = svm.LinearSVC(max_iter=1E6) #C=classifier_kws['C']
             
@@ -418,14 +517,24 @@ def decode_labels(X,Y,train_index,test_index,classifier='LDA',clabels=None,X_tes
 
                 #Predict test data
                 Y_hat = clf_shf.predict(X_test)
+                
+                #Get weights
+#                 decoding_weights_shf[iS] = clf_shf.coef_
 
             #Calculate confusion matrix
             kfold_shf[iS] = confusion_matrix(Y_test,Y_hat,labels=clabels)
+            
+        #Calculate z-score of decoding weights
+#         decoding_weights_m_shf = np.mean(decoding_weights_shf,axis=0)
+#         decoding_weights_s_shf = np.std(decoding_weights_shf,axis=0)
+        
+#         decoding_weights_z = np.divide(decoding_weights - decoding_weights_m_shf, decoding_weights_s_shf, out = np.zeros(decoding_weights.shape,dtype=np.float32),where = decoding_weights_s_shf!=0)
+        
     else:
         kfold_shf = np.zeros((nClasses,nClasses))
-
+#     pdb.set_trace()
         #Return decoding results
-    return kfold_hits, kfold_shf
+    return kfold_hits, kfold_shf #, decoding_weights, decoding_weights_z, decoding_weights_m_shf, decoding_weights_s_shf
 
 def calculate_accuracy(results,method='L1O',plot_shuffle=False,pdfdoc=None):
     
@@ -435,6 +544,7 @@ def calculate_accuracy(results,method='L1O',plot_shuffle=False,pdfdoc=None):
     confusion_shf = np.zeros((nClasses,nClasses))
     confusion_z = np.zeros((nClasses,nClasses))
     
+#     pdb.set_trace()
     if method == 'L1O':    
         c_shf = np.zeros((nShuffles,nClasses,nClasses))
         for iK,rTuple in enumerate(results):
@@ -461,7 +571,7 @@ def calculate_accuracy(results,method='L1O',plot_shuffle=False,pdfdoc=None):
         m_shf, s_shf = np.mean(c_shf,axis=0), np.std(c_shf,axis=0)
         confusion_shf = m_shf
         confusion_z = (confusion_mat - m_shf)/s_shf
-
+#         pdb.set_trace()
         #Get signficance of decoding 
         pvalues_loo = st.norm.sf(confusion_z)
         
@@ -482,7 +592,7 @@ def calculate_accuracy(results,method='L1O',plot_shuffle=False,pdfdoc=None):
 
             #Normalize confusion matrix
             kfold_accuracies.append(kfold_hits/np.sum(kfold_hits,axis=1).reshape(-1,1))
-
+            
             #Loop through shuffles and normalize
             c_shf = np.zeros((nShuffles,nClasses,nClasses))
             for iS in range(nShuffles):
@@ -495,12 +605,12 @@ def calculate_accuracy(results,method='L1O',plot_shuffle=False,pdfdoc=None):
 
             #Get signficance of decoding 
             pvalues_kfold = st.norm.sf(kfold_zscores[iK])
-            
+#             pdb.set_trace()
             if plot_shuffle:
                 #Plot shuffle distributions
                 title = 'Shuffle Distributions for kfold {}'.format(iK)
                 plot_decoding_shuffle(kfold_accuracies[iK], c_shf, pvalues_kfold, title,pdfdoc)
-        
+
         #Take average over kfolds
         confusion_mat = np.mean(kfold_accuracies,axis=0)
         confusion_shf = np.mean(shf_accuracies,axis=0)
@@ -508,7 +618,7 @@ def calculate_accuracy(results,method='L1O',plot_shuffle=False,pdfdoc=None):
         
     return confusion_mat, confusion_shf, confusion_z
     
-def cross_validate(X,Y,Y_sort=None,method='L1O',nKfold=10,classifier='LDA',classifier_kws=None,clabels=None,shuffle=True,plot_shuffle=False,parallel=False,pdfdoc=None):
+def cross_validate(X,Y,Y_sort=None,method='L1O',nKfold=5,classifier='LDA',classifier_kws=None,clabels=None,shuffle=True,plot_shuffle=False,parallel=False,pdfdoc=None):
     ##===== Description =====##
     #The main difference between these 2 methods of cross-validation are that kfold approximates the decoding accuracy per kfold 
     #and then averages across folds to get an overall decoding accuracy. This is faster and a better approximation of the actual
@@ -540,7 +650,7 @@ def cross_validate(X,Y,Y_sort=None,method='L1O',nKfold=10,classifier='LDA',class
 #         print(np.unique(Y_sort[train_index],return_counts=True))
 #         pdb.set_trace()
         if parallel:
-            processes.append(pool.apply_async(decode_labels,args=(X,Y,train_index,test_index,classifier,clabels,X_test,shuffle,classifier_kws)))
+            processes.append(pool.apply_async(decode_labels,args=(X,Y,train_index,test_index,classifier,clabels,None,None,shuffle,classifier_kws)))
         else:
             tmp = decode_labels(X,Y,train_index,test_index,classifier,clabels,None,None,shuffle,classifier_kws)
             results.append(tmp)
@@ -632,7 +742,7 @@ def plot_confusion_matrices(confusion_mat, confusion_z, plot_titles=None,class_l
             else:
                 ax.set_yticklabels([])
             ax.set_xlabel('Decoded Stimulus Block',fontsize=12)
-            ax.set_xticklabels(class_labels,va="center",fontsize=12) 
+            ax.set_xticklabels(class_labels,va="center",rotation=0,fontsize=12) 
             
     if pdfdoc is not None:
         pdfdoc.savefig(fig)
