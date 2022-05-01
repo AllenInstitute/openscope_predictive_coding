@@ -124,22 +124,23 @@ class ResponseAnalysis(object):
             block.to_hdf(os.path.join(self.dataset.analysis_dir, session_block_name + '_block.h5'), key='df')
         return block
 
-    def get_response_xr(self, session_block_name):
+    def get_response_xr(self, session_block_name,stimulus_response_params=None):
         stimulus_duration = self.get_stimulus_duration(session_block_name)
-        stimulus_response_params = {
-                "window_around_timepoint_seconds": [-0.5, 0.5],
-                "response_window_duration_seconds": stimulus_duration,
-                "baseline_window_duration_seconds": stimulus_duration
-            }
+        if stimulus_response_params is None:
+            stimulus_response_params = {
+                    "window_around_timepoint_seconds": [-0.25, stimulus_duration],
+                    "response_window_duration_seconds": stimulus_duration,
+                    "baseline_window_duration_seconds": stimulus_duration
+                }
         stimulus_block = self.get_stimulus_block(session_block_name)
 #         import pdb; pdb.set_trace()
 #         print('generating response xarray for', session_block_name, self.suffix)
         response_xr = rp.stimulus_response_xr(self, stimulus_block, response_analysis_params=stimulus_response_params, use_events=self.use_events)
-        response_df = rp.stimulus_response_df(response_xr)
+#         response_df = rp.stimulus_response_df(response_xr)
         return response_xr
 
     def generate_response_df(self, session_block_name):
-        print('generating response dataframe for', session_block_name, self.suffix)
+#         print('generating response dataframe for', session_block_name, self.suffix)
         response_xr = self.get_response_xr(session_block_name)
         response_df = rp.stimulus_response_df(response_xr)
         return response_df
@@ -157,18 +158,18 @@ class ResponseAnalysis(object):
 
     def get_response_df(self, session_block_name):
         if self.overwrite_analysis_files:
-            print('overwriting response dataframe for', session_block_name)
+#             print('overwriting response dataframe for', session_block_name)
             if os.path.exists(self.get_response_df_path(session_block_name)):
                 os.remove(self.get_response_df_path(session_block_name))
             response_df = self.generate_response_df(session_block_name)
             self.save_response_df(response_df, session_block_name)
         elif self.regenerate_dfs:
-            print('generating df for', session_block_name)
+#             print('generating df for', session_block_name)
             response_df = self.generate_response_df(session_block_name)
         else:
             if os.path.exists(self.get_response_df_path(session_block_name)):
                 try:
-                    print('loading response dataframe for', session_block_name)
+#                     print('loading response dataframe for', session_block_name)
                     response_df = pd.read_hdf(self.get_response_df_path(session_block_name), key='df')
                 except:
                     print('couldnt load response dataframe for', session_block_name, '- regenerating')

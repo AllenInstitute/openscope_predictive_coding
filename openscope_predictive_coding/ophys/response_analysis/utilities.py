@@ -3,7 +3,7 @@ Created on Saturday July 14 2018
 
 @author: marinag
 """
-
+import os
 import numpy as np
 from scipy import stats
 import pandas as pd
@@ -266,8 +266,8 @@ def add_projection_pathway_to_df(df, cache_dir=None):
     manifest.injection_area == 'RSP')].index.values, 'projection_pathway'] = 'FF'
     manifest.at[manifest[(manifest.imaging_area == 'VISpm') & (
     manifest.injection_area == 'VISp')].index.values, 'projection_pathway'] = 'FB'
-    df = df.merge(manifest[['experiment_id', 'injection_area', 'pathway']], on='experiment_id')
-    return data
+    df = df.merge(manifest[['experiment_id', 'injection_area', 'projection_pathway']], on='experiment_id')
+    return df
 
 
 def add_location_to_df(df):
@@ -281,6 +281,5 @@ def add_location_to_df(df):
     df['location'] = None
     df['location'] = [df.iloc[row].area+'_'+df.iloc[row].depth for row in range(len(df))]
     return df
-
-
-
+    
+    

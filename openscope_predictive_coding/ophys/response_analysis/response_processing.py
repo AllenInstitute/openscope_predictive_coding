@@ -211,24 +211,20 @@ def stimulus_response_xr(analysis, stimulus_block, response_analysis_params=None
     )
 
     response_range = [0, response_analysis_params['response_window_duration_seconds']]
-    baseline_range = [-1 * response_analysis_params['baseline_window_duration_seconds']]
+    baseline_range = [-1 * response_analysis_params['baseline_window_duration_seconds'], 0]
 
-    mean_response = eventlocked_traces_xr.loc[
-        {'eventlocked_timestamps': slice(*response_range)}
-    ].mean(['eventlocked_timestamps'])
-
-    mean_baseline = eventlocked_traces_xr.loc[
-        {'eventlocked_timestamps': slice(*baseline_range)}
-    ].mean(['eventlocked_timestamps'])
+    mean_response = eventlocked_traces_xr.loc[{'eventlocked_timestamps': slice(*response_range)}].mean(['eventlocked_timestamps'])
+    mean_baseline = eventlocked_traces_xr.loc[{'eventlocked_timestamps': slice(*baseline_range)}].mean(['eventlocked_timestamps'])
+    max_response = eventlocked_traces_xr.loc[{'eventlocked_timestamps': slice(*response_range)}].max(['eventlocked_timestamps'])
+    min_response = eventlocked_traces_xr.loc[{'eventlocked_timestamps': slice(*response_range)}].min(['eventlocked_timestamps'])
+    summed_response = eventlocked_traces_xr.loc[{'eventlocked_timestamps': slice(*response_range)}].sum(['eventlocked_timestamps'])
     
-    max_response = eventlocked_traces_xr.loc[
-        {'eventlocked_timestamps': slice(*response_range)}
-    ].max(['eventlocked_timestamps'])
-
-    summed_response = eventlocked_traces_xr.loc[
-        {'eventlocked_timestamps': slice(*response_range)}
-    ].sum(['eventlocked_timestamps'])
     
+    divisor = max_response - min_response
+    trace = eventlocked_traces_xr.loc[{'eventlocked_timestamps': slice(*response_range)}]
+#     normalized_trace = 2*np.divide(trace - min_response, divisor,out = np.zeros((trace.shape),dtype=np.float32),where = divisor!=0) - 1
+    
+#     import pdb; pdb.set_trace()
     p_values = get_p_value_from_shuffled_spontaneous(analysis,
                                                  mean_response,
                                                  traces,
@@ -237,8 +233,10 @@ def stimulus_response_xr(analysis, stimulus_block, response_analysis_params=None
 
 
     result = xr.Dataset({
-        'eventlocked_traces': eventlocked_traces_xr,
+        'eventlocked_traces': trace,
+#         'normalized_trace': normalized_trace,
         'summed_response': summed_response,
+        'max_response': max_response,
         'mean_response': mean_response,
         'mean_baseline': mean_baseline,
         'p_value': p_values
@@ -253,24 +251,29 @@ def stimulus_response_df(stimulus_response_xr):
     traces = stimulus_response_xr['eventlocked_traces']
     mean_response = stimulus_response_xr['mean_response']
     summed_response = stimulus_response_xr['summed_response']
+    max_response = stimulus_response_xr['max_response']
     mean_baseline = stimulus_response_xr['mean_baseline']
+    summed_response = stimulus_response_xr['summed_response']
     p_vals = stimulus_response_xr['p_value']
     stacked_traces = traces.stack(multi_index=('stimulus_presentations_id', 'cell_specimen_id')).transpose()
     stacked_response = mean_response.stack(multi_index=('stimulus_presentations_id', 'cell_specimen_id')).transpose()
     stacked_baseline = mean_baseline.stack(multi_index=('stimulus_presentations_id', 'cell_specimen_id')).transpose()
     stacked_sum = summed_response.stack(multi_index=('stimulus_presentations_id', 'cell_specimen_id')).transpose()
+    stacked_max = max_response.stack(multi_index=('stimulus_presentations_id', 'cell_specimen_id')).transpose()
     stacked_pval = p_vals.stack(multi_index=('stimulus_presentations_id', 'cell_specimen_id')).transpose()
 
     num_repeats = len(stacked_traces)
     trace_timestamps = np.repeat(
         stacked_traces.coords['eventlocked_timestamps'].data[np.newaxis, :],
         repeats=num_repeats, axis=0)
-
+    
     df = pd.DataFrame({
         'stimulus_presentations_id': stacked_traces.coords['stimulus_presentations_id'],
         'cell_specimen_id': stacked_traces.coords['cell_specimen_id'],
         'trace': list(stacked_traces.data),
         'trace_timestamps': list(trace_timestamps),
+        'summed_response': summed_response.data,
+        'max_response': stacked_max.data,
         'mean_response': stacked_response.data,
         'baseline_response': stacked_baseline.data,
         'summed_response': stacked_sum.data,

@@ -18,13 +18,13 @@ import matplotlib.patches as mpatches
 import matplotlib.colors as colors
 from matplotlib import pyplot as plt
 
-#Plotting Params
-sns.set_style("ticks")
-plt.rcParams['font.size'] = 16
-plt.rcParams['axes.labelweight']='bold'
-plt.rcParams['figure.titleweight'] = 'bold'
-plt.rcParams['axes.titleweight'] = 'bold'
-plt.rcParams['xtick.major.pad']='10'
+# #Plotting Params
+# sns.set_style("ticks")
+# plt.rcParams['font.size'] = 16
+# plt.rcParams['axes.labelweight']='bold'
+# plt.rcParams['figure.titleweight'] = 'bold'
+# plt.rcParams['axes.titleweight'] = 'bold'
+# plt.rcParams['xtick.major.pad']='10'
 
 color_names=['windows blue','red','amber','faded green','dusty purple','orange','steel blue','pink',
              'greyish','mint','clay','light cyan','forest green','pastel purple','salmon','dark brown',
@@ -40,7 +40,7 @@ from sklearn.model_selection import StratifiedKFold
 
 #Decoding Params
 nProcesses = 25
-nShuffles = 100
+nShuffles = 50
 
 #Predictive Coding Github Repository
 sys.path.append('/home/dwyrick/Git/openscope_predictive_coding/')
@@ -50,76 +50,144 @@ cache_dir = '/srv/data/AllenInst/opc_analysis'
 
 mainseq_ids = [68, 78, 13, 26]
 oddball_ids = [6, 17, 22, 51, 71, 89, 103, 110, 111, 112]
-transctrl_dict = {68: (68,78), 78: (78,13), 13: (13,26), 26: (26,68)}
+transctrl_dict = {68: (68,78), 78: (78,13), 13: (13,26), 26: (26,68),6: (13,6), 17: (13,17), 22: (13,22), 51: (13,51), 71: (13,71), 89: (13,89), 103: (13,103), 110: (13,110), 111: (13,111), 112: (13,112)}
+
+from multiprocessing import Pool
 
 
-def get_responses_per_session(manifest,  use_events=True, variable='summed_response'):
+# def get_responses_per_session(manifest, area, block='oddball', use_events=True, variable='summed_response'):
+    
+#     X_responses = {}
+
+#     #Get experimental IDs for area of interest
+#     experiment_ids = manifest[(manifest.imaging_area==area)].experiment_id.values
+
+#     for eID in experiment_ids:
+#         ## Temporary Fix: For some reason this experimental ID throws errors for me -D. Wyrick
+#         if int(eID) == 848691390:
+#             continue
+#         print('{}, '.format(int(eID)),end='')
+#         ## Load in dataset
+#         dataset = OpenScopePredictiveCodingDataset(int(eID), cache_dir)
+
+#         #Create analysis object
+#         analysis = ResponseAnalysis(dataset, use_events=use_events) 
+
+#         # Get stimulus table for all of the presentations for each of the stimulus types
+#         stimulus_df = dataset.stimulus_table
+
+#         ##========================
+#         stim_ids = stimulus_df[stimulus_df.session_block_name == block].index.values
+        
+#         #Get response x-array and take deconvolved events
+#         xresp = analysis.get_response_xr(block)
+#         X_sub = xresp[variable].sel(stimulus_presentations_id = stim_ids)
+#         X_responses[eID] = X_sub
+                  
+#     return X_responses
+
+def get_responses_per_session(manifest, area, use_events=True, variable='summed_response'):
+
+    #Get experimental IDs for area of interest
+    experiment_ids = manifest[(manifest.imaging_area==area)].experiment_id.values
+
+    stimulus_blocks = ['randomized_control_pre','oddball','transition_control','randomized_control_post']
+    X_responses = {b: {} for b in stimulus_blocks}
+    for eID in experiment_ids:
+        ## Temporary Fix: For some reason this experimental ID throws errors for me -D. Wyrick
+        if int(eID) == 848691390:
+            continue
+
+        ## Load in dataset
+        dataset = OpenScopePredictiveCodingDataset(int(eID), cache_dir)
+
+        #Create analysis object
+        analysis = ResponseAnalysis(dataset, use_events=use_events) 
+
+        # Get stimulus table for all of the presentations for each of the stimulus types
+        stimulus_df = dataset.stimulus_table
+
+        ##========================
+        for context in stimulus_blocks:
+            #Get stimulus IDs
+            stim_ids = stimulus_df[stimulus_df.session_block_name == context].index.values
+
+            #Get response x-array and take deconvolved events
+            xresp = analysis.get_response_xr(context)
+            x_sub = xresp[variable].sel(stimulus_presentations_id = stim_ids)
+            X_responses[context][eID] = x_sub
+            
+    return X_responses, stimulus_df
+
+def _get_response_dfs_per_session(eID,use_events=True, variables=['trace','summed_response']):
+    ## Load in dataset
+    dataset = OpenScopePredictiveCodingDataset(int(eID), cache_dir)
+
+    #Create analysis object
+    analysis = ResponseAnalysis(dataset, use_events=use_events)
+#             analysis.overwrite_analysis_files = True
+#             analysis.regenerate_dfs = True
+
+    # Get stimulus table for all of the presentations for each of the stimulus types
+    stimulus_df = dataset.stimulus_table
+
+    ##========================
+    #Get randomized control pre and post       
+    #Get response dataframe and take deconvolved events
+    x_df = analysis.get_response_df('randomized_control_pre')
+    randctrl_pre_df = x_df[['stimulus_presentations_id','cell_specimen_id','session_block_name','image_id','oddball',*variables]]
+
+    #Get response dataframe and take deconvolved events
+    x_df = analysis.get_response_df('randomized_control_post')
+    randctrl_post_df = x_df[['stimulus_presentations_id','cell_specimen_id','session_block_name','image_id','oddball',*variables]]
+
+    ##========================
+    #Get oddball block
+    #Get response dataframe and take deconvolved events
+    x_df = analysis.get_response_df('oddball')
+    oddball_df = x_df[['stimulus_presentations_id','cell_specimen_id','session_block_name','image_id','oddball',*variables]]
+
+    ##========================
+    #Get transition block
+    x_df = analysis.get_response_df('transition_control')
+    transctrl_df = x_df[['stimulus_presentations_id','cell_specimen_id','session_block_name','image_id','oddball',*variables]]
+
+    #Append this experiments data
+    tmp_df = pd.concat((randctrl_pre_df,oddball_df,transctrl_df,randctrl_post_df))
+    return (tmp_df, stimulus_df)
+    
+def get_response_dfs_per_session(manifest,  use_events=True, variables=['trace','summed_response']):
     areanames = ['RSP', 'VISp', 'VISpm']
     blocks = ['randomized_control_pre','randomized_control_post','transition_control','oddball']
     
-    randctrl_pop_responses = {'VISp': {}, 'VISpm': {}, 'RSP': {}}
-    transctrl_pop_responses = {'VISp': {}, 'VISpm': {}, 'RSP': {}}
-    oddball_pop_responses = {'VISp': {}, 'VISpm': {}, 'RSP': {}}
+    response_df = {'VISp': {}, 'VISpm': {}, 'RSP': {}}
+    
 
+        
     for area in areanames:
         #Get experimental IDs for area of interest
         experiment_ids = manifest[(manifest.imaging_area==area)].experiment_id.values
         print('\n{}: '.format(area))
-        
-        for eID in experiment_ids:
-            ## Temporary Fix: For some reason this experimental ID throws errors for me -D. Wyrick
-            if int(eID) == 848691390:
-                continue
-            print('{}, '.format(int(eID)),end='')
-            ## Load in dataset
-            dataset = OpenScopePredictiveCodingDataset(int(eID), cache_dir)
+        processes = []
+        with Pool(20) as p: 
+            for eID in experiment_ids:
+                ## Temporary Fix: For some reason this experimental ID throws errors for me -D. Wyrick
+                if int(eID) == 848691390:
+                    continue
+                
+                processes.append(p.apply_async(_get_response_dfs_per_session,args=(eID,use_events,variables)))
 
-            #Create analysis object
-            analysis = ResponseAnalysis(dataset, use_events=use_events) 
-
-            # Get stimulus table for all of the presentations for each of the stimulus types
-            stimulus_df = dataset.stimulus_table
-
-            ##========================
-            #Get randomized control pre and post
-            stim_ids = stimulus_df[stimulus_df.session_block_name == 'randomized_control_pre'].index.values
-#             import pdb; pdb.set_trace()
-            #Get response x-array and take deconvolved events
-            xresp = analysis.get_response_xr('randomized_control_pre')
-            randctrl_pre = xresp[variable].loc[stim_ids]
-            
-            stim_ids = stimulus_df[stimulus_df.session_block_name == 'randomized_control_post'].index.values
-
-            #Get response x-array and take deconvolved events
-            xresp = analysis.get_response_xr('randomized_control_post')
-            randctrl_post = xresp[variable].loc[stim_ids]
-
-            #Append this experiments data
-            randctrl_pop_responses[area][eID] = [randctrl_pre,randctrl_post]
-            
-            ##========================
-            #Get oddball block
-            stim_ids = stimulus_df[stimulus_df.session_block_name == 'transition_control'].index.values
-
-            #Get response x-array and take deconvolved events
-            xresp = analysis.get_response_xr('transition_control')
-            transctrl_pop_responses[area][eID] = xresp[variable].loc[stim_ids]
-            
-            ##========================
-            #Get oddball block
-            stim_ids = stimulus_df[stimulus_df.session_block_name == 'oddball'].index.values
-
-            #Get response x-array and take deconvolved events
-            xresp = analysis.get_response_xr('oddball')
-            oddball_pop_responses[area][eID] = xresp[variable].loc[stim_ids]
-                    
-    return randctrl_pop_responses, transctrl_pop_responses, oddball_pop_responses, stimulus_df
-
+            for eID, out in zip(experiment_ids,processes):
+                print('{}, '.format(int(eID)),end='')
+                stimulus_df= out.get()[1]
+                response_df[area][eID] = out.get()[0]
+  
+    return response_df, stimulus_df
 
 # variable: 'summed_events' or 'mean_response' when we're using deconvolved events
 #           'max_response' or 'mean_response' when we're using raw dfof
 def create_psuedopopulation(manifest, area, block='None', use_events=True, variable='summed_response'):
-    
+           
     #Get experimental IDs for area of interest
     experiment_ids = manifest[(manifest.imaging_area==area)].experiment_id.values
 
@@ -143,15 +211,232 @@ def create_psuedopopulation(manifest, area, block='None', use_events=True, varia
 
         #Get response x-array and take deconvolved events
         xresp = analysis.get_response_xr(block)
-
-        #Append this experiments data
-        X_list.append(xresp[variable].loc[stim_ids])
         
-    #Concatenate neurons from all experiments to create pseudopopulation vectors
+        #Append this experiments data
+        X_list.append(xresp[variable].sel(stimulus_presentations_id= stim_ids))
+#         import pdb; pdb.set_trace()
+        
+#     #Concatenate neurons from all experiments to create pseudopopulation vectors
+#     timepts = np.arange(8)/30
+#     for x in X_list:
+#         x.coords['eventlocked_timestamps'] = timepts
     X_responses = xr.concat(X_list,'cell_specimen_id')
-    
+#     import pdb; pdb.set_trace()
     print('{} pseudopopulation created for the {} block: {} neurons from {} experiments'.format(area,block, X_responses.shape[-1],len(X_list)))
     return X_responses, stimulus_df
+
+# def match_trials_2wayanova(response_df, stimulus_df, block='oddball', trial_type='ABCD', seq_dist=1, trial_indy=slice(None)):
+    
+#     stimulus_presentations_ids = response_df['stimulus_presentations_id'].values
+#     session_blocks = response_df['session_block_name'].unique()
+    
+#     for block in session_blocks:
+#         #Get trial indices where MS images and oddball images were presented
+#         MS_stimIDs = stimulus_df[(stimulus_df.session_block_name == block) & (stimulus_df.image_id.isin(mainseq_ids))].index.values
+#         OB_stimIDs = stimulus_df[(stimulus_df.session_block_name == block) & (stimulus_df.image_id.isin(oddball_ids))].index.values
+    
+        
+#     #If we're in the oddball block, make sure we only take MS images that are at least 2 sequences away from an oddball
+#     if trial_type == 'ABCD':        
+#         seq_ids_wo_oddballs = []
+#         for sID in MS_stimIDs:
+#             #If it's the first 2 sequencces, add them to the list; no oddballs have been presented
+#             if (sID-12) < starting_stimID:
+#                 seq_ids_wo_oddballs.append(sID)
+#                 continue
+#             #If the current sequence, and the last sequence, and 2 sequences ago all ended without an oddball, use that trial; look at stimulus_key 
+#             if all([stimulus_df.loc[sID-4*ii]['stimulus_key'][-1] == mainseq_ids[-1] for ii in range(4)]):
+#                 seq_ids_wo_oddballs.append(sID)
+#         MS_stimIDs = np.array(seq_ids_wo_oddballs)
+
+#         #Use presentation IDs to select data we're interested in
+#         X_subset = X_responses.sel(stimulus_presentations_id = MS_stimIDs[trial_indy])
+# #             X_subset = X_responses.loc[MS_stimIDs[trial_indy]]
+#         Y_subset = stimulus_df.loc[MS_stimIDs[trial_indy]]['image_id'].values
+#         Y_sort = stimulus_df.loc[MS_stimIDs[trial_indy]]['image_id'].values
+
+        
+def match_trials_anova(response_df, stimulus_df, block='oddball', trial_type='ABCD', seq_dist=1, trial_indy=slice(None)):
+        #Get the starting stimulus presentation ID for this block
+    starting_stimID = stimulus_df[(stimulus_df.session_block_name == block)].index.values[0]
+    
+    #Get trial indices where MS images and oddball images were presented
+    MS_stimIDs = stimulus_df[(stimulus_df.session_block_name == block) & (stimulus_df.image_id.isin(mainseq_ids))].index.values
+    OB_stimIDs = stimulus_df[(stimulus_df.session_block_name == block) & (stimulus_df.image_id.isin(oddball_ids))].index.values
+    
+    if block == 'oddball':
+        trial_indy = slice(3000,3120)
+        #If we're in the oddball block, make sure we only take MS images that are at least 2 sequences away from an oddball
+        if trial_type == 'ABCD':        
+            seq_ids_wo_oddballs = []
+            for sID in MS_stimIDs:
+                #If it's the first 2 sequencces, add them to the list; no oddballs have been presented
+                if (sID-12) < starting_stimID:
+                    seq_ids_wo_oddballs.append(sID)
+                    continue
+                #If the current sequence, and the last sequence, and 2 sequences ago all ended without an oddball, use that trial; look at stimulus_key 
+                if all([stimulus_df.loc[sID-4*ii]['stimulus_key'][-1] == mainseq_ids[-1] for ii in range(4)]):
+                    seq_ids_wo_oddballs.append(sID)
+            MS_stimIDs = np.array(seq_ids_wo_oddballs)
+
+            #Use presentation IDs to select data we're interested in
+            X_subset = response_df[response_df.stimulus_presentations_id.isin(MS_stimIDs[trial_indy])]
+
+        elif trial_type == 'ABCDX':
+
+            #Use the oddball stimulus presentation IDs to identify the presentation IDs for the main sequence IDs we want
+            if seq_dist > 0:
+                #We're taking ABCD---X
+                prevMS_stimIDs = sorted(np.concatenate([OB_stimIDs - 4*seq_dist - ii for ii in range(4)]))
+            elif seq_dist == 0:
+                #We're taking DABCX, where D is shared above if seq_dist == 1
+                prevMS_stimIDs = sorted(np.concatenate([OB_stimIDs - ii for ii in range(1,5)]))
+
+            #Use presentation IDs to select data we're interested in
+            stim_ids = np.concatenate((prevMS_stimIDs,OB_stimIDs))
+            X_subset = response_df[response_df.stimulus_presentations_id.isin(stim_ids)]
+
+        elif trial_type == 'XABCD':
+
+            #Use the oddball stimulus presentation IDs to identify the presentation IDs for the main sequence IDs that occur after an oddball has been presented
+            nextMS_stimIDs = sorted(np.concatenate([OB_stimIDs + 4*seq_dist + ii for ii in range(1,5)]))
+
+            #Use presentation IDs to select data we're interested in
+            stim_ids = np.concatenate((nextMS_stimIDs,OB_stimIDs))
+            X_subset = response_df[response_df.stimulus_presentations_id.isin(stim_ids)]
+            
+        elif trial_type == 'X':
+            #Just get the oddball trials
+            X_subset = response_df[response_df.stimulus_presentations_id.isin(OB_stimIDs)]
+
+        elif trial_type == 'DAXA':
+            #Get DA
+            #Use the oddball stimulus presentation IDs to identify the main sequence image A that occurs after D but before X; DABCX
+            DA_stimIDs = sorted(OB_stimIDs - 3 - 4*seq_dist)
+            
+            #And the A that occurs after X
+            XA_stimIDs = sorted(OB_stimIDs + 1)
+              
+            #Use presentation IDs to select data we're interested in
+            stim_ids = np.concatenate((DA_stimIDs,XA_stimIDs))
+            X_subset = response_df[response_df.stimulus_presentations_id.isin(stim_ids)]
+            
+            
+    elif block == 'transition_control':
+        #Make sure we take trials of the same transition type as in the oddball context
+        #i.e. trials where image B was presented will be proceeded by tials where image A was shown
+        if trial_type == 'ABCD': 
+            seq_ids_correct_transitions = []
+            for sID in MS_stimIDs:
+                imgID = stimulus_df.loc[sID]['image_id']
+                if transctrl_dict[imgID] == stimulus_df.loc[sID]['stimulus_key']:
+                    seq_ids_correct_transitions.append(sID)
+            MS_stimIDs = np.array(seq_ids_correct_transitions)
+
+            #Use presentation IDs to select data we're interested in
+            X_subset = response_df[response_df.stimulus_presentations_id.isin(MS_stimIDs[trial_indy])]
+        
+        #Similarly, now we're going to include all of the DX transitions
+        #In the transition context, ABCDX is almost the same as XABCD, except for which 'A' trials we want to include
+        #ABCDX: (D,A),(A,B),(B,C),(C,D),(C,X)
+        #XABCD: (X,A),(A,B),(B,C),(C,D),(C,X)
+        elif trial_type == 'ABCDX':
+            seq_ids_correct_transitions = []
+            for sID in MS_stimIDs:
+                imgID = stimulus_df.loc[sID]['image_id']
+                if transctrl_dict[imgID] == stimulus_df.loc[sID]['stimulus_key']:
+                    seq_ids_correct_transitions.append(sID)
+            MS_stimIDs = np.array(seq_ids_correct_transitions)
+            
+            #Get CX trials
+            seq_ids_correct_transitions = []
+            for sID in OB_stimIDs:
+                if stimulus_df.loc[sID]['stimulus_key'][0] == mainseq_ids[-2]:
+                    seq_ids_correct_transitions.append(sID)
+            OB_stimIDs  = np.array(seq_ids_correct_transitions)
+#             pdb.set_trace()
+            #Use presentation IDs to select data we're interested in
+            stim_ids = np.concatenate((MS_stimIDs,OB_stimIDs))
+            X_subset = response_df[response_df.stimulus_presentations_id.isin(stim_ids)]
+            
+        #Similarly, now we're going to include all of the XA instead of DA transitions
+        elif trial_type == 'XABCD':
+            seq_ids_correct_transitions = []
+            for sID in MS_stimIDs:
+                imgID = stimulus_df.loc[sID]['image_id']
+                #Get 'XA' A trials
+                if (imgID == mainseq_ids[0]) & (stimulus_df.loc[sID]['stimulus_key'][0] in oddball_ids):
+                    seq_ids_correct_transitions.append(sID)
+                #Get AB, BC, CD trials
+                elif (imgID in mainseq_ids[1:]) & (transctrl_dict[imgID] == stimulus_df.loc[sID]['stimulus_key']):
+                    seq_ids_correct_transitions.append(sID)
+            MS_stimIDs = np.array(seq_ids_correct_transitions)
+            
+            #Get CX trials
+            seq_ids_correct_transitions = []
+            for sID in OB_stimIDs:
+                if stimulus_df.loc[sID]['stimulus_key'][0] == mainseq_ids[-2]:
+                    seq_ids_correct_transitions.append(sID)
+            OB_stimIDs  = np.array(seq_ids_correct_transitions)
+            
+            #Use presentation IDs to select data we're interested in
+            stim_ids = np.concatenate((MS_stimIDs,OB_stimIDs))
+            X_subset = response_df[response_df.stimulus_presentations_id.isin(stim_ids)]
+            
+        #Let's see if these 'A' trials are different
+        elif trial_type == 'DAXA':
+            #Get DA
+            DA_stim_ids = []
+            for sID in MS_stimIDs:
+                imgID = stimulus_df.loc[sID]['image_id']
+                #Get 'XA' A trials
+                if (imgID == mainseq_ids[0]) & (transctrl_dict[imgID] == stimulus_df.loc[sID]['stimulus_key']):
+                    DA_stim_ids.append(sID)
+            DA_stim_ids = np.array(DA_stim_ids)
+            
+            #Get XA
+            XA_stim_ids = []
+            for sID in MS_stimIDs:
+                imgID = stimulus_df.loc[sID]['image_id']
+                #Get 'XA' A trials
+                if (imgID == mainseq_ids[0]) & (stimulus_df.loc[sID]['stimulus_key'][0] in oddball_ids):
+                    XA_stim_ids.append(sID)
+            XA_stim_ids = np.array(XA_stim_ids)
+            
+            #Use presentation IDs to select data we're interested in
+            stim_ids = np.concatenate((DA_stim_ids,XA_stim_ids))
+            X_subset = response_df[response_df.stimulus_presentations_id.isin(stim_ids)]
+            
+        elif trial_type == 'X':
+            #Get CX trials
+            seq_ids_correct_transitions = []
+            for sID in OB_stimIDs:
+                if stimulus_df.loc[sID]['stimulus_key'][0] == mainseq_ids[-2]:
+                    seq_ids_correct_transitions.append(sID)
+            OB_stimIDs  = np.array(seq_ids_correct_transitions)
+            
+            #Just get the oddball trials
+            X_subset = response_df[response_df.stimulus_presentations_id.isin(OB_stimIDs)]
+            
+        elif trial_type == 'all':
+            #Just get the oddball trials
+            stim_ids = np.concatenate((MS_stimIDs,OB_stimIDs))
+            X_subset = response_df[response_df.stimulus_presentations_id.isin(stim_ids)]
+    else:
+        if trial_type == 'ABCD':
+            #Just get the MS trials
+            X_subset = response_df[response_df.stimulus_presentations_id.isin(MS_stimIDs)]
+            
+        elif trial_type == 'X':
+            #Just get the oddball trials
+            X_subset = response_df[response_df.stimulus_presentations_id.isin(OB_stimIDs)]
+            
+        elif trial_type == 'all':
+            #Just get the oddball trials
+            stim_ids = np.concatenate((MS_stimIDs,OB_stimIDs))
+            X_subset = response_df[response_df.stimulus_presentations_id.isin(stim_ids)]
+                
+    return X_subset
 
 # trial_type options:
 #    'ABCD'  -> Just main sequence (MS) images
@@ -192,9 +477,41 @@ def match_trials(X_responses, stimulus_df, block='oddball', trial_type='ABCD', s
             MS_stimIDs = np.array(seq_ids_wo_oddballs)
 
             #Use presentation IDs to select data we're interested in
-            X_subset = X_responses.loc[MS_stimIDs[trial_indy]]
+            X_subset = X_responses.sel(stimulus_presentations_id = MS_stimIDs[trial_indy])
+#             X_subset = X_responses.loc[MS_stimIDs[trial_indy]]
             Y_subset = stimulus_df.loc[MS_stimIDs[trial_indy]]['image_id'].values
             Y_sort = stimulus_df.loc[MS_stimIDs[trial_indy]]['image_id'].values
+        
+        elif trial_type == 'ABCX':
+
+            #Use the oddball stimulus presentation IDs to identify the presentation IDs for the main sequence IDs we want
+            prevMS_stimIDs = sorted(np.concatenate([OB_stimIDs - ii for ii in range(1,4)])) #just get the ABC before X
+            nextMS_stimIDs = sorted(np.concatenate([OB_stimIDs + ii for ii in range(1,5)])) #get the ABCD after X
+            
+
+            #Use presentation IDs to select data we're interested in
+            stim_ids = np.sort(np.concatenate((prevMS_stimIDs,OB_stimIDs)))
+            X_subset = X_responses.sel(stimulus_presentations_id = stim_ids)
+
+            Y_subset = stimulus_df.loc[stim_ids]['image_id'].values
+            #But to ensure equal proportions of each oddball in a particulat fold of the cross-validation, we create Y_sort
+            Y_sort = stimulus_df.loc[stim_ids]['image_id'].values
+            
+        elif trial_type == 'X-ABCD':
+
+            #Use the oddball stimulus presentation IDs to identify the presentation IDs for the main sequence IDs we want
+            prevMS_stimIDs = sorted(np.concatenate([OB_stimIDs - ii for ii in range(1,4)])) #just get the ABC before X
+            nextMS_stimIDs = sorted(np.concatenate([OB_stimIDs + ii for ii in range(1,5)])) #get the ABCD after X
+            
+
+            #Use presentation IDs to select data we're interested in
+            stim_ids = np.sort(np.concatenate((OB_stimIDs,nextMS_stimIDs)))
+            X_subset = X_responses.sel(stimulus_presentations_id = stim_ids)
+
+            Y_subset = stimulus_df.loc[stim_ids]['image_id'].values
+            #But to ensure equal proportions of each oddball in a particulat fold of the cross-validation, we create Y_sort
+            Y_sort = stimulus_df.loc[stim_ids]['image_id'].values
+            
 
         elif trial_type == 'ABCDX':
 
@@ -208,7 +525,7 @@ def match_trials(X_responses, stimulus_df, block='oddball', trial_type='ABCD', s
 
             #Use presentation IDs to select data we're interested in
             stim_ids = np.concatenate((prevMS_stimIDs,OB_stimIDs))
-            X_subset = X_responses.loc[stim_ids]
+            X_subset = X_responses.sel(stimulus_presentations_id = stim_ids)
 
             #These are the class labels we will use to construct a classifier; note, I've labeled all of the oddballs 1
             Y_subset =np.concatenate((stimulus_df.loc[prevMS_stimIDs]['image_id'],np.repeat(1,100)))
@@ -222,13 +539,13 @@ def match_trials(X_responses, stimulus_df, block='oddball', trial_type='ABCD', s
 
             #Use presentation IDs to select data we're interested in
             stim_ids = np.concatenate((nextMS_stimIDs,OB_stimIDs))
-            X_subset = X_responses.loc[stim_ids]
+            X_subset = X_responses.sel(stimulus_presentations_id = stim_ids)
             Y_subset =np.concatenate((stimulus_df.loc[nextMS_stimIDs]['image_id'].values,np.repeat(1,100)))
             Y_sort = stimulus_df.loc[stim_ids]['image_id'].values
             
         elif trial_type == 'X':
             #Just get the oddball trials
-            X_subset = X_responses.loc[OB_stimIDs]
+            X_subset = X_responses.sel(stimulus_presentations_id = OB_stimIDs)
             Y_subset = stimulus_df.loc[OB_stimIDs]['image_id'].values
             Y_sort = stimulus_df.loc[OB_stimIDs]['image_id'].values
             
@@ -243,9 +560,45 @@ def match_trials(X_responses, stimulus_df, block='oddball', trial_type='ABCD', s
               
             #Use presentation IDs to select data we're interested in
             stim_ids = np.concatenate((DA_stimIDs,XA_stimIDs))
-            X_subset = X_responses.loc[stim_ids]
+            X_subset = X_responses.sel(stimulus_presentations_id = stim_ids)
             Y_subset = np.concatenate((np.repeat(0,len(DA_stimIDs)),np.repeat(1,len(XA_stimIDs))))
             Y_sort = np.array([stimulus_df.loc[sID - 1]['image_id'] for sID in stim_ids])
+            
+#         elif trial_type == 'DX':
+#             #Use the oddball stimulus presentation IDs to identify the main sequence image D before X; DABCX
+#             D_stimIDs = sorted(OB_stimIDs - 4*seq_dist)
+            
+#             stim_ids = np.concatenate((D_stimIDs,OB_stimIDs))
+#             X_subset = X_responses.sel(stimulus_presentations_id = stim_ids)
+#             Y_subset = stimulus_df.loc[stim_ids]['image_id'].values
+#             Y_sort = np.concatenate((np.array([int(stimulus_df.loc[sID+4*seq_dist]['image_id']) for sID in D_stimIDs]),np.array([int(stimulus_df.loc[sID]['image_id']) for sID in OB_stimIDs])))
+            
+        elif trial_type == 'DX':
+            #Use the oddball stimulus presentation IDs to identify the main sequence image D before X; DABCX
+            D_stimIDs = sorted(OB_stimIDs - 4*seq_dist)
+            
+            stim_ids = np.concatenate((D_stimIDs,OB_stimIDs))
+            X_subset = X_responses.sel(stimulus_presentations_id = stim_ids)
+            Y_subset = np.concatenate((np.repeat(0,len(D_stimIDs)),np.repeat(1,len(OB_stimIDs))))
+            Y_sort = stimulus_df.loc[stim_ids]['image_id'].values
+            
+            
+        elif trial_type == 'XD':
+            #Use the oddball stimulus presentation IDs to identify the main sequence image D after  X; XABCD
+            D_stimIDs = sorted(OB_stimIDs + 4*seq_dist)
+            
+            stim_ids = np.concatenate((D_stimIDs,OB_stimIDs))
+            X_subset = X_responses.sel(stimulus_presentations_id = stim_ids)
+            Y_subset = np.concatenate((np.repeat(0,len(D_stimIDs)),np.repeat(1,len(OB_stimIDs))))
+            Y_sort = stimulus_df.loc[stim_ids]['image_id'].values
+ 
+            
+        elif trial_type == 'all':
+            #Just get the oddball trials
+            X_subset = X_responses
+            stimIDs = X_subset.coords['stimulus_presentations_id'].values
+            Y_subset = stimulus_df.loc[stimIDs]['image_id'].values
+            Y_sort = stimulus_df.loc[stimIDs]['image_id'].values
             
             
     elif block == 'transition_control':
@@ -260,7 +613,7 @@ def match_trials(X_responses, stimulus_df, block='oddball', trial_type='ABCD', s
             MS_stimIDs = np.array(seq_ids_correct_transitions)
 
             #Use presentation IDs to select data we're interested in
-            X_subset = X_responses.loc[MS_stimIDs[trial_indy]]
+            X_subset = X_responses.sel(stimulus_presentations_id = MS_stimIDs[trial_indy])
             Y_subset = stimulus_df.loc[MS_stimIDs[trial_indy]]['image_id'].values
             Y_sort = stimulus_df.loc[MS_stimIDs[trial_indy]]['image_id'].values
         
@@ -285,7 +638,7 @@ def match_trials(X_responses, stimulus_df, block='oddball', trial_type='ABCD', s
             
             #Use presentation IDs to select data we're interested in
             stim_ids = np.concatenate((MS_stimIDs,OB_stimIDs))
-            X_subset = X_responses.loc[stim_ids]
+            X_subset = X_responses.sel(stimulus_presentations_id = stim_ids)
             Y_subset = np.concatenate((stimulus_df.loc[MS_stimIDs]['image_id'],np.repeat(1,len(OB_stimIDs))))
             Y_sort = stimulus_df.loc[stim_ids]['image_id'].values
             
@@ -311,8 +664,45 @@ def match_trials(X_responses, stimulus_df, block='oddball', trial_type='ABCD', s
             
             #Use presentation IDs to select data we're interested in
             stim_ids = np.concatenate((MS_stimIDs,OB_stimIDs))
-            X_subset = X_responses.loc[stim_ids]
+            X_subset = X_responses.sel(stimulus_presentations_id = stim_ids)
             Y_subset = np.concatenate((stimulus_df.loc[MS_stimIDs]['image_id'],np.repeat(1,len(OB_stimIDs))))
+            Y_sort = stimulus_df.loc[stim_ids]['image_id'].values
+    
+        #Similarly, now we're going to include all of the XA instead of DA transitions
+        elif trial_type == 'CX':
+
+            #Get CX trials
+            stimIDs_correct_transitions = []
+            for iID in oddball_ids:
+                #CX trials
+                stimIDs =  stimulus_df[(stimulus_df.session_block_name == 'transition_control') & (stimulus_df.image_id == iID)  & (stimulus_df.stimulus_key == transctrl_dict[iID])].index.values
+                stimIDs_correct_transitions.append(stimIDs-1) #Append C trials
+                stimIDs_correct_transitions.append(stimIDs) #Append X trials
+                
+            #Use presentation IDs to select data we're interested in
+            stim_ids = stim_ids = np.sort(np.concatenate(stimIDs_correct_transitions))
+            X_subset = X_responses.sel(stimulus_presentations_id = stim_ids)
+            Y_subset = stimulus_df.loc[stim_ids]['image_id'].values
+            Y_sort = stimulus_df.loc[stim_ids]['image_id'].values
+            
+        elif trial_type == 'XA':
+            
+            #Get CX trials
+            stimIDs_correct_transitions = []
+            for iID in oddball_ids:
+                #XA trials
+                stimIDs =  stimulus_df[(stimulus_df.session_block_name == 'transition_control') & (stimulus_df.image_id == iID)].index.values
+                for sID in stimIDs:
+                    imgID = stimulus_df.loc[sID+1]['image_id']
+                    #Get 'XA' A trials
+                    if (imgID == mainseq_ids[0]) & (stimulus_df.loc[sID]['stimulus_key'][0] == iID):
+                        stimIDs_correct_transitions.append(sID) #Add X trial
+                        stimIDs_correct_transitions.append(sID+1) #Add A trial
+                        
+            #Use presentation IDs to select data we're interested in
+            stim_ids = stim_ids = np.sort(stimIDs_correct_transitions)
+            X_subset = X_responses.sel(stimulus_presentations_id = stim_ids)
+            Y_subset = stimulus_df.loc[stim_ids]['image_id'].values
             Y_sort = stimulus_df.loc[stim_ids]['image_id'].values
             
         #Let's see if these 'A' trials are different
@@ -337,7 +727,7 @@ def match_trials(X_responses, stimulus_df, block='oddball', trial_type='ABCD', s
             
             #Use presentation IDs to select data we're interested in
             stim_ids = np.concatenate((DA_stim_ids,XA_stim_ids))
-            X_subset = X_responses.loc[stim_ids]
+            X_subset = X_responses.sel(stimulus_presentations_id = stim_ids)
             Y_subset = np.concatenate((np.repeat(0,len(DA_stim_ids)),np.repeat(1,len(XA_stim_ids))))
             Y_sort = np.array([stimulus_df.loc[sID]['stimulus_key'][0] for sID in stim_ids])
             
@@ -350,9 +740,15 @@ def match_trials(X_responses, stimulus_df, block='oddball', trial_type='ABCD', s
             OB_stimIDs  = np.array(seq_ids_correct_transitions)
             
             #Just get the oddball trials
-            X_subset = X_responses.loc[OB_stimIDs]
+            X_subset = X_responses.sel(stimulus_presentations_id = OB_stimIDs)
             Y_subset = stimulus_df.loc[OB_stimIDs]['image_id'].values
             Y_sort = stimulus_df.loc[OB_stimIDs]['image_id'].values
+        elif trial_type == 'all':
+            #Just get the oddball trials
+            X_subset = X_responses
+            stimIDs = X_subset.coords['stimulus_presentations_id'].values
+            Y_subset = stimulus_df.loc[stimIDs]['image_id'].values
+            Y_sort = stimulus_df.loc[stimIDs]['image_id'].values
             
 #     elif block == 'occlusion':
 #         if trial_type == 'X':
@@ -365,29 +761,42 @@ def match_trials(X_responses, stimulus_df, block='oddball', trial_type='ABCD', s
     else:
         if trial_type == 'ABCD':
             #Just get the MS trials
-            X_subset = X_responses.loc[MS_stimIDs]
+            X_subset = X_responses.sel(stimulus_presentations_id = MS_stimIDs)
             Y_subset = stimulus_df.loc[MS_stimIDs]['image_id'].values
             Y_sort = stimulus_df.loc[MS_stimIDs]['image_id'].values
             
         elif trial_type == 'X':
             #Just get the oddball trials
-            X_subset = X_responses.loc[OB_stimIDs]
+            X_subset = X_responses.sel(stimulus_presentations_id = OB_stimIDs)
             Y_subset = stimulus_df.loc[OB_stimIDs]['image_id'].values
             Y_sort = stimulus_df.loc[OB_stimIDs]['image_id'].values
+            
+        elif trial_type == 'all':
+            #Just get the oddball trials
+            X_subset = X_responses
+            stimIDs = X_subset.coords['stimulus_presentations_id'].values
+            Y_subset = stimulus_df.loc[stimIDs]['image_id'].values
+            Y_sort = stimulus_df.loc[stimIDs]['image_id'].values
     
     return X_subset, Y_subset, Y_sort
     
 
 ##====================##
 ##===== Decoding =====##
+from sklearn.neural_network import MLPClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.gaussian_process import GaussianProcessClassifier
+from sklearn.gaussian_process.kernels import RBF
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 
-def decode_labels(X,Y,train_index,test_index,classifier='LDA',clabels=None,X_test=None,Y_test=None,shuffle=True,classifier_kws=None):
+def decode_labels(X,Y,train_index,test_index,classifier='LDA',clabels=None,X_test=None,Y_test=None,shuffle=True,parallel=True,classifier_kws=None):
     
     nTrials, nNeurons = X.shape
-    #Copy training index for shuffle decoding
-    train_index_sh = train_index.copy()
-    np.random.shuffle(train_index_sh)
-    
+
     #Split data into training and test sets
     if X_test is None:
         #Training and test set are from the same time interval
@@ -397,11 +806,17 @@ def decode_labels(X,Y,train_index,test_index,classifier='LDA',clabels=None,X_tes
         #Get class labels
         Y_train = Y[train_index]
         Y_test = Y[test_index]
-    
+        
     else:
         #Training and test set are from different epochs
         X_train = X
         Y_train = Y
+        train_index = np.arange(len(X_train))
+#         print('.',end='')
+        
+    #Copy training index for shuffle decoding
+    train_index_sh = train_index.copy()
+
      
     #How many classes are we trying to classify?
     class_labels,nTrials_class = np.unique(Y,return_counts=True)
@@ -412,8 +827,28 @@ def decode_labels(X,Y,train_index,test_index,classifier='LDA',clabels=None,X_tes
 #         clf = LinearDiscriminantAnalysis()
         clf = LinearDiscriminantAnalysis(solver='lsqr',shrinkage='auto')
     elif classifier == 'SVM':
-        clf = svm.LinearSVC(max_iter=1E6)
-
+        clf = svm.LinearSVC(max_iter=1E6) #penalty='l1',dual=False,
+    elif classifier == 'NLSVM':
+        clf = svm.NuSVC(gamma="auto")
+    elif classifier == 'QDA':
+        clf = QuadraticDiscriminantAnalysis()
+    elif classifier == 'NearestNeighbors':
+        clf = KNeighborsClassifier()
+    elif classifier == 'LinearSVM':
+        clf = SVC(kernel="linear", C=0.025)
+    elif classifier == 'RBFSVM':
+        clf = SVC(gamma=2, C=1)
+    elif classifier == 'GP':
+        clf = GaussianProcessClassifier(1.0 * RBF(1.0))
+    elif classifier == 'DecisionTree':
+        clf = DecisionTreeClassifier(max_depth=5)
+    elif classifier == 'RandomForest':
+        clf = RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1)
+    elif classifier == 'NeuralNet':
+        clf = MLPClassifier(alpha=1, max_iter=1000)
+    elif classifier == 'NaiveBayes':
+        clf = GaussianNB()
+    
     #Luca's decoder 
     if (classifier == 'Euclidean_Dist') | (classifier == 'nearest_neighbor'):
         nTrials_test, nNeurons = X_test.shape
@@ -433,20 +868,7 @@ def decode_labels(X,Y,train_index,test_index,classifier='LDA',clabels=None,X_tes
                 #Predict test data by taking the maximum correlation between the test population vector and training PSTHs
                 Rs = [np.corrcoef(PSTH_train[iStim],X_test[iTrial])[0,1] for iStim in range(nClasses)]
                 Y_hat[iTrial] =  class_labels[np.argmax(Rs)]
-                
-#             #Just to check whether the classifier correctly decodes the training data
-#         nTrials_train = X_train.shape[0]
-#         Y_hat_train = np.zeros((nTrials_train,),dtype=int)
-#         for iTrial in range(nTrials_train):
-#             if classifier == 'Euclidean_Dist':
-#                 #Predict test data by taking the minimum euclidean distance
-#                 dist = [np.sum((X_train[iTrial] - PSTH_train[iStim])**2) for iStim in range(nClasses)]
-#                 Y_hat_train[iTrial] =  class_labels[np.argmin(dist)]
-#             else:
-#                 #Predict test data by taking the maximum correlation between the test population vector and training PSTHs
-#                 Rs = [np.corrcoef(PSTH_train[iStim],X_train[iTrial])[0,1] for iStim in range(nClasses)]
-#                 Y_hat_train[iTrial] =  class_labels[np.argmax(Rs)]
-#         pdb.set_trace()
+
     #All other classifiers
     else:
         #Fit model to the training data
@@ -455,85 +877,41 @@ def decode_labels(X,Y,train_index,test_index,classifier='LDA',clabels=None,X_tes
         #Predict test data
         Y_hat = clf.predict(X_test)
         Y_hat_train = clf.predict(X_train)
-        
-        #Get weights
-        decoding_weights = clf.coef_
     
     #Calculate confusion matrix
     kfold_hits = confusion_matrix(Y_test,Y_hat,labels=clabels)
-#     kfold_hits_train = confusion_matrix(Y_train,Y_hat_train,labels=clabels)
-#     print(kfold_hits_train)
 #     pdb.set_trace()
-
     ##===== Perform Shuffle decoding =====##
     if shuffle:
         kfold_shf = np.zeros((nShuffles,nClasses,nClasses))
-#         decoding_weights_shf = np.zeros((nShuffles,nNeurons))
         
-        #Classify with shuffled dataset
-        for iS in range(nShuffles):
-            np.random.shuffle(train_index_sh)
-            Y_train_sh = Y[train_index_sh]
-#             overlap = 10
-#             while np.abs(overlap) >= 6:
-#                 #Shuffle training indices
-#                 np.random.shuffle(train_index_sh)
-#                 Y_train_sh = Y[train_index_sh]
-#                 print(overlap)
-#                 overlap = np.sum(Y_train == Y_train_sh)-np.sum(Y_train != Y_train_sh)
-#             print('\t -> {}'.format(overlap))
-            #Initialize Classifier
-            if classifier == 'LDA':
-#                 clf_shf = LinearDiscriminantAnalysis()
-                clf_shf = LinearDiscriminantAnalysis(solver='lsqr',shrinkage='auto')
-            elif classifier == 'SVM':
-                clf_shf = svm.LinearSVC(max_iter=1E6) #C=classifier_kws['C']
+        if parallel:
+            with Pool(50) as p:
+                processes = []
+                #Classify with shuffled dataset
+                for iS in range(nShuffles):
+                    np.random.shuffle(train_index_sh)
+                    Y_train_sh = Y[train_index_sh]
+
+                    processes.append(p.apply_async(decode_labels,args=(X_train,Y_train_sh,None,None,classifier,clabels,X_test,Y_test,False,None)))
+
+                #Extract results from parallel kfold processing
+                kfold_shf = np.array([p.get()[0] for p in processes])
+        else:
             
-            #"Luca's" decoder 
-            if (classifier == 'Euclidean_Dist') | (classifier == 'nearest_neighbor'):
-                nTrials_test, nNeurons = X_test.shape
-                PSTH_sh = np.zeros((nClasses,nNeurons))
+            kfold_shf_list = []
+            for iS in range(nShuffles):
+                np.random.shuffle(train_index_sh)
+                Y_train_sh = Y[train_index_sh]
+                kfshf, _ = decode_labels(X_train,Y_train_sh,None,None,classifier,clabels,X_test,Y_test,False,None)
+                kfold_shf_list.append(kfshf)
+            kfold_shf = np.array(kfold_shf_list)
                 
-                #Calculate PSTH templates from training data
-                for iStim, cID in enumerate(class_labels):
-                    pos = np.where(Y_train_sh == cID)[0]
-                    PSTH_sh[iStim] = np.mean(X_train[pos],axis=0)
-
-                Y_hat = np.zeros((nTrials_test,),dtype=int)
-                for iTrial in range(nTrials_test):
-                    if classifier == 'Euclidean_Dist':
-                        #Predict test data by taking the minimum euclidean distance
-                        dist = [np.sum((X_test[iTrial] - PSTH_sh[iStim])**2) for iStim in range(nClasses)]
-                        Y_hat[iTrial] =  class_labels[np.argmin(dist)]
-                    else:
-                        #Predict test data by taking the maximum correlation between the test population vector and training PSTHs
-                        Rs = [np.corrcoef(PSTH_sh[iStim],X_test[iTrial])[0,1] for iStim in range(nClasses)]
-                        Y_hat[iTrial] =  class_labels[np.argmax(Rs)]
-                    
-            #All other classifiers
-            else:
-                #Fit model to the training data
-                clf_shf.fit(X_train, Y_train_sh)
-
-                #Predict test data
-                Y_hat = clf_shf.predict(X_test)
-                
-                #Get weights
-#                 decoding_weights_shf[iS] = clf_shf.coef_
-
-            #Calculate confusion matrix
-            kfold_shf[iS] = confusion_matrix(Y_test,Y_hat,labels=clabels)
             
-        #Calculate z-score of decoding weights
-#         decoding_weights_m_shf = np.mean(decoding_weights_shf,axis=0)
-#         decoding_weights_s_shf = np.std(decoding_weights_shf,axis=0)
-        
-#         decoding_weights_z = np.divide(decoding_weights - decoding_weights_m_shf, decoding_weights_s_shf, out = np.zeros(decoding_weights.shape,dtype=np.float32),where = decoding_weights_s_shf!=0)
-        
     else:
-        kfold_shf = np.zeros((nClasses,nClasses))
+        kfold_shf = np.ones((nShuffles,nClasses,nClasses))*(1/nClasses)
+
 #     pdb.set_trace()
-        #Return decoding results
     return kfold_hits, kfold_shf #, decoding_weights, decoding_weights_z, decoding_weights_m_shf, decoding_weights_s_shf
 
 def calculate_accuracy(results,method='L1O',plot_shuffle=False,pdfdoc=None):
@@ -543,6 +921,7 @@ def calculate_accuracy(results,method='L1O',plot_shuffle=False,pdfdoc=None):
     confusion_mat = np.zeros((nClasses,nClasses))
     confusion_shf = np.zeros((nClasses,nClasses))
     confusion_z = np.zeros((nClasses,nClasses))
+    
     
 #     pdb.set_trace()
     if method == 'L1O':    
@@ -570,10 +949,15 @@ def calculate_accuracy(results,method='L1O',plot_shuffle=False,pdfdoc=None):
         #Calculate z-score 
         m_shf, s_shf = np.mean(c_shf,axis=0), np.std(c_shf,axis=0)
         confusion_shf = m_shf
-        confusion_z = (confusion_mat - m_shf)/s_shf
+        confusion_z =  (confusion_mat - m_shf)/s_shf
+
 #         pdb.set_trace()
-        #Get signficance of decoding 
-        pvalues_loo = st.norm.sf(confusion_z)
+#         #Get signficance of decoding 
+#         pvalues_loo = st.norm.sf(confusion_z)
+        
+        #Calculate the signifance of the unshuffled FCF results given the surrogate distribution
+        N = confusion_mat.shape[0]
+        pvalues = 1-2*np.abs(np.array([[st.percentileofscore(c_shf[:,i,j],confusion_mat[i,j],kind='strict') for j in range(N)] for i in range(N)])/100 - .5)
         
         if plot_shuffle:
             #Plot shuffle distributions
@@ -584,14 +968,16 @@ def calculate_accuracy(results,method='L1O',plot_shuffle=False,pdfdoc=None):
         kfold_accuracies = []
         shf_accuracies = []
         kfold_zscores = []
-        
+        kfold_pvalues = []
+#         pdb.set_trace()
         #Calculate decoding accuracy per kfold
         for iK,rTuple in enumerate(results):
             kfold_hits = rTuple[0] #size [nClasses x nClasses]
             kfold_shf = rTuple[1]  #size [nShuffles,nClasses x nClasses]
 
             #Normalize confusion matrix
-            kfold_accuracies.append(kfold_hits/np.sum(kfold_hits,axis=1).reshape(-1,1))
+            cm = kfold_hits/np.sum(kfold_hits,axis=1).reshape(-1,1)
+            kfold_accuracies.append(cm)
             
             #Loop through shuffles and normalize
             c_shf = np.zeros((nShuffles,nClasses,nClasses))
@@ -601,11 +987,18 @@ def calculate_accuracy(results,method='L1O',plot_shuffle=False,pdfdoc=None):
             #Calculate z-score for this kfold
             m_shf, s_shf = np.mean(c_shf,axis=0), np.std(c_shf,axis=0)
             shf_accuracies.append(m_shf)
-            kfold_zscores.append((kfold_accuracies[iK] - m_shf)/s_shf)
+            kfold_z = np.divide(kfold_accuracies[iK] - m_shf,s_shf,np.zeros(kfold_hits.shape),where=s_shf!=0)
+            kfold_zscores.append(kfold_z)
 
-            #Get signficance of decoding 
-            pvalues_kfold = st.norm.sf(kfold_zscores[iK])
+#             #Get signficance of decoding 
+#             pvalues_kfold = st.norm.sf(kfold_z)
 #             pdb.set_trace()
+
+            #Calculate the signifance of the unshuffled FCF results given the surrogate distribution
+            N = cm.shape[0]
+            pvalues_kfold = 1-2*np.abs(np.array([[st.percentileofscore(c_shf[:,i,j],cm[i,j],kind='strict') for j in range(N)] for i in range(N)])/100 - .5)
+            kfold_pvalues.append(pvalues_kfold)
+        
             if plot_shuffle:
                 #Plot shuffle distributions
                 title = 'Shuffle Distributions for kfold {}'.format(iK)
@@ -615,10 +1008,11 @@ def calculate_accuracy(results,method='L1O',plot_shuffle=False,pdfdoc=None):
         confusion_mat = np.mean(kfold_accuracies,axis=0)
         confusion_shf = np.mean(shf_accuracies,axis=0)
         confusion_z = np.mean(kfold_zscores,axis=0)
+        pvalues = np.mean(kfold_pvalues,axis=0)
         
-    return confusion_mat, confusion_shf, confusion_z
+    return confusion_mat, confusion_shf, confusion_z, pvalues
     
-def cross_validate(X,Y,Y_sort=None,method='L1O',nKfold=5,classifier='LDA',classifier_kws=None,clabels=None,shuffle=True,plot_shuffle=False,parallel=False,pdfdoc=None):
+def cross_validate(X,Y,Y_sort=None,method='L1O',nKfold=5,classifier='LDA',classifier_kws=None,clabels=None,shuffle=True,plot_shuffle=False,parallel=False,nProcesses=30,pdfdoc=None):
     ##===== Description =====##
     #The main difference between these 2 methods of cross-validation are that kfold approximates the decoding accuracy per kfold 
     #and then averages across folds to get an overall decoding accuracy. This is faster and a better approximation of the actual
@@ -650,9 +1044,10 @@ def cross_validate(X,Y,Y_sort=None,method='L1O',nKfold=5,classifier='LDA',classi
 #         print(np.unique(Y_sort[train_index],return_counts=True))
 #         pdb.set_trace()
         if parallel:
-            processes.append(pool.apply_async(decode_labels,args=(X,Y,train_index,test_index,classifier,clabels,None,None,shuffle,classifier_kws)))
+            processes.append(pool.apply_async(decode_labels,args=(X,Y,train_index,test_index,classifier,clabels,None,None,shuffle,False,classifier_kws)))
         else:
-            tmp = decode_labels(X,Y,train_index,test_index,classifier,clabels,None,None,shuffle,classifier_kws)
+#             print(f'\nkfold {iK} - ')
+            tmp = decode_labels(X,Y,train_index,test_index,classifier,clabels,None,None,shuffle,True,classifier_kws)
             results.append(tmp)
 
     #Extract results from parallel kfold processing
@@ -661,9 +1056,9 @@ def cross_validate(X,Y,Y_sort=None,method='L1O',nKfold=5,classifier='LDA',classi
         pool.close()
         
     ##===== Calculate decoding accuracy =====##
-    confusion_mat, confusion_shf, confusion_z = calculate_accuracy(results,method,plot_shuffle,pdfdoc)
-    
-    return confusion_mat, confusion_shf, confusion_z
+    confusion_mat, confusion_shf, confusion_z, pvalues = calculate_accuracy(results,method,plot_shuffle,pdfdoc)
+#     pdb.set_trace()
+    return confusion_mat, confusion_shf, confusion_z, pvalues
 
 
 ##==============================##
@@ -748,29 +1143,48 @@ def plot_confusion_matrices(confusion_mat, confusion_z, plot_titles=None,class_l
         pdfdoc.savefig(fig)
         plt.close(fig)
     
-def plot_decoding_accuracy(confusion_mat,confusion_z,ax=None,block='randomized_ctrl',class_labels=None,title=None,annot=True,clims=None):
+def plot_decoding_accuracy(confusion_mat,confusion_z,ax=None,block='randomized_ctrl',class_labels=None,xylabels=None,title=None,annot=True,clims=None,cbar=True):
     #Plot decoding performance
     if ax is None:
         fig,ax = plt.subplots(figsize=(5,5))#,
         
     if title is not None:
-        ax.set_title(title,fontsize=14)
+        ax.set_title(title,fontsize=16)
 
     pvalues = st.norm.sf(confusion_z)
     
     if clims is None:
         clims = [np.percentile(confusion_mat,1) % 0.05, np.percentile(confusion_mat,99) - np.percentile(confusion_mat,99) % 0.05]
     #Plot actual decoding performance
-    sns.heatmap(confusion_mat,annot=annot,fmt='.2f',annot_kws={'fontsize': 16},cbar=True,square=True,vmin=clims[0],vmax=clims[1],cbar_kws={'shrink': 0.5},ax=ax)
+    sns.heatmap(confusion_mat,annot=annot,fmt='2.2f',annot_kws={'fontsize': 10},cbar=cbar,square=True,vmin=clims[0],vmax=clims[1],cbar_kws={'shrink': 0.5,'ticks':clims,'label': 'Accuracy'},ax=ax,rasterized=True)
 
-    nClasses = confusion_mat.shape[0] 
-    for i in range(nClasses):
-        for j in range(nClasses):
-            if (pvalues[i,j] < 0.05):
-                ax.text(j+0.65,i+0.35,'*',color='g',fontsize=20,fontweight='bold')
-    #Labels
-    ax.set_ylabel('Actual Image',fontsize=14)
-    ax.set_xlabel('Decoded Image',fontsize=14)
+    
+    pval = pvalues < 0.05
+    x = np.linspace(0, pval.shape[0]-1, pval.shape[0])+0.5
+    y = np.linspace(0, pval.shape[1]-1, pval.shape[1])+0.5
+    X, Y = np.meshgrid(x, y)
+    if len(pval) > 4:
+        ax.scatter(X,Y,s=10*pval, marker='.',c='k')
+    else:
+        ax.scatter(X,Y,s=20*pval, marker='.',c='k')
+        
+#     nClasses = confusion_mat.shape[0] 
+#     for i in range(nClasses):
+#         for j in range(nClasses):
+#             if (pvalues[i,j] < 0.05):
+#                 ax.text(j+0.2,i+1.05,'*',color='g',fontsize=20,fontweight='bold')
+#                 ax.text(j+0.35,i+0.7,'*',color='k',fontsize=20,fontweight='bold')
+    
+#     if xylabels is not None:
+#         #Labels
+#         ax.set_ylabel(xylabels[0],fontsize=16)
+#         ax.set_xlabel(xylabels[1],fontsize=16)
+#     else:
+#         ax.set_ylabel('Actual Image',fontsize=16)
+#         ax.set_xlabel('Decoded Image',fontsize=16)
+
     if class_labels is not None:
+        ax.set_yticks(np.arange(len(class_labels))+0.5)
+        ax.set_xticks(np.arange(len(class_labels))+0.5) 
         ax.set_yticklabels(class_labels,va="center",fontsize=14)
         ax.set_xticklabels(class_labels,va="center",fontsize=14) 
