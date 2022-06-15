@@ -76,6 +76,65 @@ def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
     for f in formats:
         fig.savefig(filename + f, transparent=True, orientation='landscape', bbox_inches='tight')
 
+
+def reorder_traces(original_traces, analysis):
+    tdf = analysis.trials_response_df
+    df = ut.get_mean_df(tdf, analysis, conditions=['cell', 'change_image_name'])
+
+    images = np.sort(df.change_image_name.unique())
+
+    cell_list = []
+    for image in images:
+        tmp = df[(df.change_image_name == image) & (df.pref_stim == True)]
+        order = np.argsort(tmp.mean_response.values)[::-1]
+        cell_ids = list(tmp.cell.values[order])
+        cell_list = cell_list + cell_ids
+
+    reordered_traces = []
+    for cell_index in cell_list:
+        reordered_traces.append(original_traces[cell_index, :])
+    return np.asarray(reordered_traces)
+
+
+def plot_sorted_traces_heatmap(dataset, analysis, ax=None, save=False, use_events=False):
+    import visual_behavior.ophys.response_analysis.response_processing as rp
+    if use_events:
+        traces = dataset.events_array.copy()
+        traces = rp.filter_events_array(traces, scale=2)
+        traces = reorder_traces(traces, analysis)
+        vmax = 0.01
+        # vmax = np.percentile(traces, 99)
+        label = 'event magnitude'
+        suffix = '_events'
+    else:
+        traces = dataset.dff_traces_array
+        traces = reorder_traces(traces, analysis)
+        vmax = np.percentile(traces, 99)
+        label = 'dF/F'
+        suffix = ''
+    if ax is None:
+        figsize = (14, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    cax = ax.pcolormesh(traces, cmap='magma', vmin=0, vmax=vmax)
+    ax.set_ylabel('cells')
+
+    interval_seconds = 5 * 60
+    ophys_frame_rate = int(dataset.metadata.ophys_frame_rate.values[0])
+    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces, dataset.ophys_timestamps,
+                                                                               ophys_frame_rate)
+    ax.set_xticks(np.arange(0, upper_limit, interval_seconds * ophys_frame_rate))
+    ax.set_xticklabels(np.arange(0, upper_limit / ophys_frame_rate, interval_seconds))
+    ax.set_xlabel('time (seconds)')
+
+    cb = plt.colorbar(cax, pad=0.015)
+    cb.set_label(label, labelpad=3)
+    if save:
+        save_figure(fig, figsize, dataset.analysis_dir, 'experiment_summary',
+                    str(dataset.experiment_id) + 'sorted_traces_heatmap' + suffix)
+    return ax
+
+
 def plot_traces_heatmap(dff_traces, ax=None, save_dir=None):
     if ax is None:
         figsize = (20, 8)
