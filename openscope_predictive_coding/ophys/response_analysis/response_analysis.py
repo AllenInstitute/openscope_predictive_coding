@@ -164,7 +164,7 @@ class ResponseAnalysis(object):
             response_df = self.generate_response_df(session_block_name)
             self.save_response_df(response_df, session_block_name)
         elif self.regenerate_dfs:
-#             print('generating df for', session_block_name)
+            # print('generating df for', session_block_name)
             response_df = self.generate_response_df(session_block_name)
         else:
             if os.path.exists(self.get_response_df_path(session_block_name)):

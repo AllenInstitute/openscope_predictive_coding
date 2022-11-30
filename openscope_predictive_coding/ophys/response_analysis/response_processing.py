@@ -224,7 +224,7 @@ def stimulus_response_xr(analysis, stimulus_block, response_analysis_params=None
     trace = eventlocked_traces_xr.loc[{'eventlocked_timestamps': slice(*response_range)}]
 #     normalized_trace = 2*np.divide(trace - min_response, divisor,out = np.zeros((trace.shape),dtype=np.float32),where = divisor!=0) - 1
     
-#     import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     p_values = get_p_value_from_shuffled_spontaneous(analysis,
                                                  mean_response,
                                                  traces,
